@@ -3,49 +3,156 @@ import cv2
 import numpy as np
 from collections import deque
 import math
+import json
+from pathlib import Path
+import sys
+
+
+# =================================================
+# ROVER CONFIGURATION
+# =================================================
+
+def load_rover_config(config_path):
+    try:
+        with config_path.open(encoding="utf-8") as config_file:
+            config = json.load(config_file)
+
+        if not isinstance(config, dict):
+            raise ValueError("configuration must be a JSON object")
+
+        numeric_keys = (
+            "camera_height",
+            "camera_forward_offset",
+            "camera_lateral_offset",
+            "camera_yaw_deg",
+            "rover_front_offset",
+            "marker_size",
+            "fisheye_balance",
+        )
+        integer_keys = (
+            "target_id",
+            "resolution_width",
+            "resolution_height",
+        )
+
+        for key in numeric_keys + integer_keys:
+            if key not in config:
+                raise ValueError(f"missing required setting '{key}'")
+
+        for key in numeric_keys:
+            value = config[key]
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
+                raise ValueError(f"'{key}' must be a finite number")
+
+        for key in integer_keys:
+            if type(config[key]) is not int:
+                raise ValueError(f"'{key}' must be an integer")
+
+        for key in (
+            "camera_height",
+            "marker_size",
+            "resolution_width",
+            "resolution_height",
+        ):
+            if config[key] <= 0:
+                raise ValueError(f"'{key}' must be greater than zero")
+
+        if not 0 <= config["target_id"] < 50:
+            raise ValueError("'target_id' must be between 0 and 49 for DICT_5X5_50")
+
+        if not 0.0 <= config["fisheye_balance"] <= 1.0:
+            raise ValueError("'fisheye_balance' must be between 0 and 1")
+
+    except (OSError, UnicodeError, ValueError, OverflowError) as exc:
+        print(f"Error loading rover configuration '{config_path}': {exc}", file=sys.stderr)
+        raise SystemExit(1)
+
+    return config
+
+
+PROJECT_DIR = Path(__file__).resolve().parent
+rover_config = load_rover_config(PROJECT_DIR / "rover_config.json")
 
 
 # =================================================
 # CALIBRATION
 # =================================================
 
-data = np.load("/home/ugvs2/camera_calibration_fisheye.npz")
+def load_camera_calibration(calibration_path):
+    try:
+        if not calibration_path.is_file():
+            raise FileNotFoundError("file is missing or is not a regular file")
 
-K = data["K"]
-D = data["D"]
+        calibration = np.load(calibration_path, allow_pickle=False)
+        if not isinstance(calibration, np.lib.npyio.NpzFile):
+            raise ValueError("file must be an NPZ archive")
 
-DIM = (1280, 720)
+        with calibration:
+            missing_keys = [key for key in ("K", "D") if key not in calibration.files]
+            if missing_keys:
+                raise ValueError(f"missing required keys: {', '.join(missing_keys)}")
+
+            K = calibration["K"]
+            D = calibration["D"]
+
+            if not isinstance(K, np.ndarray) or K.shape != (3, 3):
+                raise ValueError(
+                    "'K' must have shape (3, 3); "
+                    f"got {getattr(K, 'shape', None)}"
+                )
+
+            if not isinstance(D, np.ndarray) or D.shape not in ((4, 1), (1, 4), (4,)):
+                raise ValueError(
+                    "'D' must contain exactly 4 fisheye coefficients with shape "
+                    "(4, 1), (1, 4), or (4,); "
+                    f"got {getattr(D, 'shape', None)}"
+                )
+
+            return K, D
+
+    except Exception as exc:
+        print(f"Error loading camera calibration '{calibration_path}': {exc}", file=sys.stderr)
+        raise SystemExit(1)
+
+
+K, D = load_camera_calibration(PROJECT_DIR / "camera_calibration_fisheye.npz")
+
+DIM = (rover_config["resolution_width"], rover_config["resolution_height"])
 
 
 # =================================================
 # CAMERA / ROVER / MARKER GEOMETRY
 # =================================================
 
-CAMERA_HEIGHT = 1.215
+CAMERA_HEIGHT = rover_config["camera_height"]
 
 # Camera position relative to rover geometric center
-CAMERA_FORWARD_OFFSET = 0.000
+CAMERA_FORWARD_OFFSET = rover_config["camera_forward_offset"]
 
 # + = right
 # - = left
-CAMERA_LATERAL_OFFSET = -0.525
+CAMERA_LATERAL_OFFSET = rover_config["camera_lateral_offset"]
 
 # Camera yaw relative to rover
 # + = right
 # - = left
-CAMERA_YAW_DEG = 5.4
+CAMERA_YAW_DEG = rover_config["camera_yaw_deg"]
 
 CAMERA_YAW_RAD = math.radians(CAMERA_YAW_DEG)
 
 # Distance from rover geometric center
 # to the front edge of the rover
-ROVER_FRONT_OFFSET = 0.600
+ROVER_FRONT_OFFSET = rover_config["rover_front_offset"]
 
 
-MARKER_SIZE = 0.159
+MARKER_SIZE = rover_config["marker_size"]
 HALF = MARKER_SIZE / 2.0
 
-TARGET_ID = 23
+TARGET_ID = rover_config["target_id"]
 
 
 object_points = np.array([
@@ -105,7 +212,7 @@ new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
     D,
     DIM,
     np.eye(3),
-    balance=0.9
+    balance=rover_config["fisheye_balance"]
 )
 
 map1, map2 = cv2.fisheye.initUndistortRectifyMap(
