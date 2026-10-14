@@ -292,6 +292,103 @@ Logging settings are optional for older configuration files: omitted settings
 default to `false` and `measurements.csv`. `log_measurements` must be a boolean;
 `log_file` must be a nonempty filename in the project directory.
 
+## Marker map architecture
+
+The repository now contains `marker_map.json`, which has been created, committed,
+and pushed. Its purpose is to provide a scalable warehouse marker map for future
+global and simultaneous multi-marker localization, supporting hundreds of markers.
+
+Current structure:
+
+- `version`: 1.
+- `frame`: `warehouse`.
+- `units`: `m` (meters).
+
+ArUco map configuration:
+
+- Planned dictionary: `DICT_5X5_1000`.
+- Default physical marker size: **0.159 m**.
+- Supported future marker IDs: **0-999**.
+
+**The live application has NOT yet been switched to `DICT_5X5_1000`.**
+`aruco_live.py` still uses the validated `DICT_5X5_50` dictionary and target
+ID **23**. Changing the live detector is a separate tested change during
+**Sprint 02 — Scalable Markers**.
+
+Markers are stored as direct lookup keys under `markers`, using string IDs:
+
+```json
+{
+  "markers": {
+    "23": {
+      "x": 0.0,
+      "y": 0.0,
+      "yaw_deg": 0.0,
+      "enabled": true
+    }
+  }
+}
+```
+
+An individual marker may optionally override the default physical size with
+`"size": <meters>`. The `enabled` boolean allows a marker to remain in the map
+while temporarily excluded from future localization.
+
+Coordinate convention:
+
+- X+ = forward.
+- Y+ = right.
+- Y- = left.
+- yaw+ = clockwise/right.
+- yaw- = counterclockwise/left.
+
+Marker **23** currently acts only as a temporary map origin/reference. Its
+**X = 0, Y = 0, Yaw = 0** must NOT be treated as final surveyed warehouse
+coordinates. Actual warehouse coordinates will be measured later.
+
+Future localization behavior:
+
+- Detect all visible known markers.
+- Look up each marker in `marker_map.json`.
+- Calculate an independent Global X / Y / Yaw rover estimate from each marker.
+- Combine compatible estimates using multi-marker fusion.
+- Reject or reduce the weight of poor observations.
+- Calculate Localization Confidence.
+
+Possible future localization quality inputs include:
+
+- Number of valid visible markers.
+- Marker pixel width.
+- Distance.
+- Pose stability.
+- Reprojection quality.
+- Agreement between marker-derived rover poses.
+
+Localization Confidence will later support rover speed limiting using the
+levels **HIGH**, **MEDIUM**, **LOW**, and **LOST**. Detection migration, global
+localization, fusion, confidence calculation, and confidence-based speed limiting
+are future work. **Do not implement this logic now.**
+
+Current roadmap state:
+
+| Sprint | Scope | State |
+|---|---|---|
+| Sprint 01 — Geometric Calibration | Validate current geometry and calibration. | Current active sprint. |
+| Sprint 02 — Scalable Markers | Test `DICT_5X5_1000` and multiple IDs; remove the single `TARGET_ID` dependency. | Future tested change. |
+| Sprint 03 — Global Localization | Use `marker_map.json` to calculate Global X / Y / Yaw. | Future work. |
+| Sprint 04 — Multi-Marker Confidence | Implement multi-marker fusion and Localization Confidence. | Future work. |
+| Sprint 05 — Pixhawk / MAVLink | Send validated external localization to Pixhawk 6C and validate EKF integration. | Future work. |
+| Sprint 06 — Safety and Autonomy | Use localization quality for speed limits, fail-safe behavior, safety inputs, and first controlled autonomous routes. | Future work. |
+| Sprint 07 — Integrated Validation | Repeated warehouse testing, logging, loaded tests, and integrated validation. | Future work. |
+| Sprint 08 — Lift Platform | 4-point synchronized screw lift platform with movement interlocks and safety validation. | Future work. |
+
+The map is not yet used by `aruco_live.py`; surveying real marker coordinates and
+connecting validated observations to the map remain future work during Sprint 03.
+
+This architecture documentation does not authorize changes to `aruco_live.py`,
+`rover_config.json`, `marker_map.json`, camera calibration, or navigation math.
+Runtime integration requires a separate explicit request and testing.
+
 ## CSV measurement logging
 
 Optional CSV measurement logging is implemented and disabled by default:
@@ -409,11 +506,12 @@ Near-term:
 
 After that:
 
-7. Create `marker_map.json`.
-8. Support multiple known ArUco IDs.
-9. Convert observations into global rover X / Y / Yaw.
+7. During Sprint 02, test DICT_5X5_1000 and support multiple known ArUco IDs.
+8. During Sprint 03, survey real marker coordinates and populate marker_map.json.
+9. During Sprint 03, convert validated marker observations into Global rover X / Y / Yaw.
 10. Validate global localization.
-11. Integrate Raspberry Pi localization with Pixhawk 6C over MAVLink.
+11. During Sprint 04, implement multi-marker fusion and Localization Confidence.
+12. During Sprint 05, integrate validated external localization with Pixhawk 6C over MAVLink.
 
 Do not jump ahead to later stages without an explicit request.
 
