@@ -1,0 +1,14 @@
+{
+  "camera_height": 1.215,
+  "camera_forward_offset": 0.0,
+  "camera_lateral_offset": -0.525,
+  "camera_yaw_deg": 5.4,
+  "rover_front_offset": 0.600,
+
+  "marker_size": 0.159,
+  "target_id": 23,
+
+  "resolution_width": 1280,
+  "resolution_height": 720,
+  "fisheye_balance": 0.9
+}
