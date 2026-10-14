@@ -6,6 +6,8 @@ import math
 import json
 from pathlib import Path
 import sys
+import csv
+from datetime import datetime
 
 
 # =================================================
@@ -66,6 +68,18 @@ def load_rover_config(config_path):
 
         if not 0.0 <= config["fisheye_balance"] <= 1.0:
             raise ValueError("'fisheye_balance' must be between 0 and 1")
+
+        if type(config.get("log_measurements", False)) is not bool:
+            raise ValueError("'log_measurements' must be a boolean")
+
+        log_file = config.get("log_file", "measurements.csv")
+        if (
+            not isinstance(log_file, str)
+            or not log_file.strip()
+            or log_file in (".", "..")
+            or Path(log_file).name != log_file
+        ):
+            raise ValueError("'log_file' must be a nonempty filename in the project directory")
 
     except (OSError, UnicodeError, ValueError, OverflowError) as exc:
         print(f"Error loading rover configuration '{config_path}': {exc}", file=sys.stderr)
@@ -242,7 +256,34 @@ detector = cv2.aruco.ArucoDetector(dictionary)
 # MAIN LOOP
 # =================================================
 
+measurement_log = None
+measurement_writer = None
+
 try:
+
+    if rover_config.get("log_measurements", False):
+        measurement_log = (PROJECT_DIR / rover_config.get("log_file", "measurements.csv")).open(
+            "a", newline="", encoding="utf-8"
+        )
+        measurement_writer = csv.writer(measurement_log)
+
+        if measurement_log.tell() == 0:
+            measurement_writer.writerow([
+                "timestamp",
+                "marker_id",
+                "front_distance",
+                "rover_forward",
+                "rover_lateral",
+                "rover_yaw",
+                "camera_forward",
+                "camera_lateral",
+                "camera_yaw",
+                "ground_distance",
+                "distance",
+                "z",
+                "marker_width_px",
+            ])
+            measurement_log.flush()
 
     while True:
 
@@ -541,6 +582,24 @@ try:
                     rover_yaw_history
                 )
 
+                if measurement_writer is not None:
+                    measurement_writer.writerow([
+                        datetime.now().astimezone().isoformat(timespec="milliseconds"),
+                        int(marker_id),
+                        filtered_front_distance,
+                        filtered_rover_forward,
+                        filtered_rover_lateral,
+                        filtered_rover_yaw,
+                        filtered_camera_forward,
+                        filtered_camera_lateral,
+                        filtered_camera_yaw,
+                        filtered_ground,
+                        filtered_distance,
+                        filtered_z,
+                        marker_width_px,
+                    ])
+                    measurement_log.flush()
+
 
                 # =========================================
                 # DRAW AXES
@@ -733,7 +792,11 @@ except KeyboardInterrupt:
 
 finally:
 
-    picam2.stop()
-    cv2.destroyAllWindows()
+    try:
+        picam2.stop()
+        cv2.destroyAllWindows()
+    finally:
+        if measurement_log is not None:
+            measurement_log.close()
 
     print("Camera stopped cleanly")
