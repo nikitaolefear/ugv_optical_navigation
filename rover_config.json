@@ -12,6 +12,6 @@
   "resolution_height": 720,
   "fisheye_balance": 0.9,
 
-  "log_measurements": false,
+  "log_measurements": true,
   "log_file": "measurements.csv"
 }

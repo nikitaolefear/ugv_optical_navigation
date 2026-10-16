@@ -249,7 +249,16 @@ dictionary = cv2.aruco.getPredefinedDictionary(
     cv2.aruco.DICT_5X5_50
 )
 
-detector = cv2.aruco.ArucoDetector(dictionary)
+detector_parameters = cv2.aruco.DetectorParameters()
+detector_parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+detector = cv2.aruco.ArucoDetector(dictionary, detector_parameters)
+
+raw_detector_parameters = cv2.aruco.DetectorParameters()
+raw_detector_parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_NONE
+raw_detector = cv2.aruco.ArucoDetector(
+    dictionary,
+    raw_detector_parameters
+)
 
 
 # =================================================
@@ -258,31 +267,82 @@ detector = cv2.aruco.ArucoDetector(dictionary)
 
 measurement_log = None
 measurement_writer = None
+previous_pose_state = None
+pose_transition_dir = PROJECT_DIR / "pose_transition_frames"
+pose_transition_dir.mkdir(exist_ok=True)
+measurement_fields = [
+    "timestamp",
+    "marker_id",
+    "front_distance",
+    "rover_forward",
+    "rover_lateral",
+    "rover_yaw",
+    "camera_forward",
+    "camera_lateral",
+    "camera_yaw",
+    "ground_distance",
+    "distance",
+    "z",
+    "marker_width_px",
+    "corner0_x",
+    "corner0_y",
+    "corner1_x",
+    "corner1_y",
+    "corner2_x",
+    "corner2_y",
+    "corner3_x",
+    "corner3_y",
+    "raw_tvec_x",
+    "raw_tvec_y",
+    "raw_tvec_z",
+    "raw_rvec_x",
+    "raw_rvec_y",
+    "raw_rvec_z",
+    "reprojection_error_px",
+    "ippe0_tvec_x",
+    "ippe0_tvec_y",
+    "ippe0_tvec_z",
+    "ippe0_rvec_x",
+    "ippe0_rvec_y",
+    "ippe0_rvec_z",
+    "ippe0_reprojection_error_px",
+    "ippe1_tvec_x",
+    "ippe1_tvec_y",
+    "ippe1_tvec_z",
+    "ippe1_rvec_x",
+    "ippe1_rvec_y",
+    "ippe1_rvec_z",
+    "ippe1_reprojection_error_px",
+    "raw_corner0_x",
+    "raw_corner0_y",
+    "raw_corner1_x",
+    "raw_corner1_y",
+    "raw_corner2_x",
+    "raw_corner2_y",
+    "raw_corner3_x",
+    "raw_corner3_y",
+    "corner0_shift_px",
+    "corner1_shift_px",
+    "corner2_shift_px",
+    "corner3_shift_px",
+]
 
 try:
 
     if rover_config.get("log_measurements", False):
-        measurement_log = (PROJECT_DIR / rover_config.get("log_file", "measurements.csv")).open(
-            "a", newline="", encoding="utf-8"
-        )
+        measurement_path = PROJECT_DIR / rover_config.get("log_file", "measurements.csv")
+        if measurement_path.exists() and measurement_path.stat().st_size:
+            with measurement_path.open(newline="", encoding="utf-8") as existing_log:
+                if next(csv.reader(existing_log), []) != measurement_fields:
+                    raise ValueError(
+                        f"CSV header mismatch in '{measurement_path}': preserve the old "
+                        "CSV and select a new log_file for diagnostic measurements."
+                    )
+        measurement_log = measurement_path.open("a", newline="", encoding="utf-8")
         measurement_writer = csv.writer(measurement_log)
 
         if measurement_log.tell() == 0:
-            measurement_writer.writerow([
-                "timestamp",
-                "marker_id",
-                "front_distance",
-                "rover_forward",
-                "rover_lateral",
-                "rover_yaw",
-                "camera_forward",
-                "camera_lateral",
-                "camera_yaw",
-                "ground_distance",
-                "distance",
-                "z",
-                "marker_width_px",
-            ])
+            measurement_writer.writerow(measurement_fields)
             measurement_log.flush()
 
     while True:
@@ -306,6 +366,17 @@ try:
         )
 
         corners, ids, rejected = detector.detectMarkers(gray)
+
+        raw_image_points = None
+        if measurement_writer is not None:
+            raw_corners, raw_ids, _ = raw_detector.detectMarkers(gray)
+            if raw_ids is not None:
+                for raw_index, raw_marker_id in enumerate(raw_ids.flatten()):
+                    if raw_marker_id == TARGET_ID:
+                        raw_image_points = raw_corners[raw_index][0].astype(np.float32)
+                        break
+
+        undistorted_diagnostic_frame = frame.copy()
 
         marker_found = False
 
@@ -363,6 +434,77 @@ try:
 
                 if not success:
                     continue
+
+                current_pose_state = "NEG" if float(rvec.reshape(-1)[0]) < 0 else "POS"
+                if (
+                    previous_pose_state is not None
+                    and current_pose_state != previous_pose_state
+                ):
+                    transition_frame = undistorted_diagnostic_frame.copy()
+                    transition_projected, _ = cv2.projectPoints(
+                        object_points, rvec, tvec, new_K, zero_dist
+                    )
+                    transition_residuals = transition_projected.reshape(4, 2) - image_points
+                    transition_error_px = float(np.sqrt(np.mean(np.sum(
+                        transition_residuals * transition_residuals, axis=1
+                    ))))
+                    # Integer coordinates are used only for drawing on the copy.
+                    for points, prefix, color in (
+                        (image_points, "", (0, 255, 0)),
+                        (raw_image_points, "R", (0, 0, 255)),
+                    ):
+                        if points is None:
+                            continue
+                        draw_points = np.rint(points).astype(int)
+                        for corner_index in range(4):
+                            point = tuple(draw_points[corner_index])
+                            next_point = tuple(draw_points[(corner_index + 1) % 4])
+                            cv2.line(transition_frame, point, next_point, color, 1)
+                            cv2.circle(
+                                transition_frame, point,
+                                (9 if prefix else 6) if corner_index == 2 else 3,
+                                color, 2
+                            )
+                            label_offset = (12, 24) if prefix else (12, -12)
+                            label_point = (
+                                point[0] + label_offset[0], point[1] + label_offset[1]
+                            )
+                            label = f"{prefix}{corner_index}"
+                            if corner_index == 2:
+                                label += " RAW corner2" if prefix else " REFINED corner2"
+                            cv2.putText(
+                                transition_frame, label, label_point,
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1
+                            )
+                    transition_text = [
+                        f"transition: {previous_pose_state} -> {current_pose_state}",
+                        f"raw_rvec_x: {float(rvec.reshape(-1)[0]):.6f}",
+                        f"raw_tvec_z: {float(tvec.reshape(-1)[2]):.6f}",
+                        f"reprojection_error_px: {transition_error_px:.6f}",
+                        f"marker_width_px: {marker_width_px:.6f}",
+                    ]
+                    if raw_image_points is None:
+                        transition_text.append("RAW ID23 NOT FOUND")
+                    for line_index, text_line in enumerate(transition_text):
+                        text_origin = (10, 25 + 25 * line_index)
+                        cv2.putText(
+                            transition_frame, text_line, text_origin,
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3
+                        )
+                        cv2.putText(
+                            transition_frame, text_line, text_origin,
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1
+                        )
+                    transition_timestamp = datetime.now().astimezone().strftime(
+                        "%Y%m%d_%H%M%S_%f"
+                    )[:-3]
+                    transition_path = pose_transition_dir / (
+                        f"{transition_timestamp}_{previous_pose_state}_to_"
+                        f"{current_pose_state}.jpg"
+                    )
+                    if not cv2.imwrite(str(transition_path), transition_frame):
+                        print(f"Failed to save transition image: {transition_path}", file=sys.stderr)
+                previous_pose_state = current_pose_state
 
 
                 # =========================================
@@ -583,6 +725,49 @@ try:
                 )
 
                 if measurement_writer is not None:
+                    projected_points, _ = cv2.projectPoints(
+                        object_points, rvec, tvec, new_K, zero_dist
+                    )
+                    residuals = projected_points.reshape(4, 2) - image_points
+                    reprojection_error_px = float(
+                        np.sqrt(np.mean(np.sum(residuals * residuals, axis=1)))
+                    )
+                    ippe_count, ippe_rvecs, ippe_tvecs, _ = cv2.solvePnPGeneric(
+                        object_points,
+                        image_points,
+                        new_K,
+                        zero_dist,
+                        flags=cv2.SOLVEPNP_IPPE_SQUARE
+                    )
+                    ippe_values = [""] * 14
+                    for candidate_index in range(min(2, int(ippe_count))):
+                        candidate_rvec = ippe_rvecs[candidate_index]
+                        candidate_tvec = ippe_tvecs[candidate_index]
+                        candidate_projected_points, _ = cv2.projectPoints(
+                            object_points, candidate_rvec, candidate_tvec, new_K, zero_dist
+                        )
+                        candidate_residuals = (
+                            candidate_projected_points.reshape(4, 2) - image_points
+                        )
+                        candidate_error_px = float(
+                            np.sqrt(np.mean(np.sum(
+                                candidate_residuals * candidate_residuals, axis=1
+                            )))
+                        )
+                        ippe_values[candidate_index * 7:(candidate_index + 1) * 7] = [
+                            *candidate_tvec.reshape(-1).tolist(),
+                            *candidate_rvec.reshape(-1).tolist(),
+                            candidate_error_px,
+                        ]
+                    raw_corner_values = [""] * 12
+                    if raw_image_points is not None:
+                        corner_shifts = np.sqrt(np.sum(
+                            (image_points - raw_image_points) ** 2, axis=1
+                        ))
+                        raw_corner_values = [
+                            *raw_image_points.reshape(-1).tolist(),
+                            *corner_shifts.tolist(),
+                        ]
                     measurement_writer.writerow([
                         datetime.now().astimezone().isoformat(timespec="milliseconds"),
                         int(marker_id),
@@ -597,6 +782,12 @@ try:
                         filtered_distance,
                         filtered_z,
                         marker_width_px,
+                        *image_points.reshape(-1).tolist(),
+                        *tvec.reshape(-1).tolist(),
+                        *rvec.reshape(-1).tolist(),
+                        reprojection_error_px,
+                        *ippe_values,
+                        *raw_corner_values,
                     ])
                     measurement_log.flush()
 
