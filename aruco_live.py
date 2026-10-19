@@ -379,6 +379,7 @@ try:
         undistorted_diagnostic_frame = frame.copy()
 
         marker_found = False
+        display_measurements = []
 
 
         # =========================================
@@ -386,12 +387,6 @@ try:
         # =========================================
 
         if ids is not None:
-
-            cv2.aruco.drawDetectedMarkers(
-                frame,
-                corners,
-                ids
-            )
 
             for i, marker_id in enumerate(ids.flatten()):
 
@@ -792,158 +787,198 @@ try:
                     measurement_log.flush()
 
 
-                # =========================================
-                # DRAW AXES
-                # =========================================
-
-                cv2.drawFrameAxes(
-                    frame,
-                    new_K,
-                    zero_dist,
+                # Save screen data until all pose calculations and diagnostics finish.
+                display_measurements.append((
+                    marker_id,
                     rvec,
                     tvec,
-                    0.08
-                )
+                    filtered_front_distance,
+                    filtered_rover_forward,
+                    filtered_rover_lateral,
+                    filtered_rover_yaw,
+                    filtered_camera_forward,
+                    filtered_camera_lateral,
+                    filtered_camera_yaw,
+                    filtered_ground,
+                    filtered_distance,
+                    filtered_z,
+                    marker_width_px,
+                ))
+
+        # All screen overlays use a separate copy after processing is complete.
+        display_frame = frame.copy()
+        if ids is not None:
+            cv2.aruco.drawDetectedMarkers(display_frame, corners, ids)
+
+        for (
+            marker_id,
+            rvec,
+            tvec,
+            filtered_front_distance,
+            filtered_rover_forward,
+            filtered_rover_lateral,
+            filtered_rover_yaw,
+            filtered_camera_forward,
+            filtered_camera_lateral,
+            filtered_camera_yaw,
+            filtered_ground,
+            filtered_distance,
+            filtered_z,
+            marker_width_px,
+        ) in display_measurements:
+
+            # =========================================
+            # DRAW AXES
+            # =========================================
+
+            cv2.drawFrameAxes(
+                display_frame,
+                new_K,
+                zero_dist,
+                rvec,
+                tvec,
+                0.08
+            )
 
 
-                # =========================================
-                # DISPLAY
-                # =========================================
+            # =========================================
+            # DISPLAY
+            # =========================================
 
-                cv2.putText(
-                    frame,
-                    f"ID: {marker_id}",
-                    (30, 45),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    (0, 255, 0),
-                    2
-                )
-
-
-                # -----------------------------------------
-                # MAIN ROVER DATA
-                # -----------------------------------------
-
-                cv2.putText(
-                    frame,
-                    f"Front Distance: {filtered_front_distance:.3f} m",
-                    (30, 90),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    (0, 255, 0),
-                    2
-                )
-
-                cv2.putText(
-                    frame,
-                    f"ROVER Forward: {filtered_rover_forward:.3f} m",
-                    (30, 130),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    (0, 255, 0),
-                    2
-                )
-
-                cv2.putText(
-                    frame,
-                    f"ROVER Lateral: {filtered_rover_lateral:.3f} m",
-                    (30, 170),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    (0, 255, 0),
-                    2
-                )
-
-                cv2.putText(
-                    frame,
-                    f"ROVER Yaw: {filtered_rover_yaw:.1f} deg",
-                    (30, 210),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    (0, 255, 0),
-                    2
-                )
+            cv2.putText(
+                display_frame,
+                f"ID: {marker_id}",
+                (30, 45),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 255, 0),
+                2
+            )
 
 
-                # -----------------------------------------
-                # CAMERA DATA
-                # -----------------------------------------
+            # -----------------------------------------
+            # MAIN ROVER DATA
+            # -----------------------------------------
 
-                cv2.putText(
-                    frame,
-                    f"Camera Forward: {filtered_camera_forward:.3f} m",
-                    (30, 260),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65,
-                    (255, 255, 0),
-                    2
-                )
+            cv2.putText(
+                display_frame,
+                f"Front Distance: {filtered_front_distance:.3f} m",
+                (30, 90),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 255, 0),
+                2
+            )
 
-                cv2.putText(
-                    frame,
-                    f"Camera Lateral: {filtered_camera_lateral:.3f} m",
-                    (30, 295),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65,
-                    (255, 255, 0),
-                    2
-                )
+            cv2.putText(
+                display_frame,
+                f"ROVER Forward: {filtered_rover_forward:.3f} m",
+                (30, 130),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 255, 0),
+                2
+            )
 
-                cv2.putText(
-                    frame,
-                    f"Camera Yaw: {filtered_camera_yaw:.1f} deg",
-                    (30, 330),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65,
-                    (255, 255, 0),
-                    2
-                )
+            cv2.putText(
+                display_frame,
+                f"ROVER Lateral: {filtered_rover_lateral:.3f} m",
+                (30, 170),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 255, 0),
+                2
+            )
+
+            cv2.putText(
+                display_frame,
+                f"ROVER Yaw: {filtered_rover_yaw:.1f} deg",
+                (30, 210),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 255, 0),
+                2
+            )
 
 
-                # -----------------------------------------
-                # DIAGNOSTICS
-                # -----------------------------------------
+            # -----------------------------------------
+            # CAMERA DATA
+            # -----------------------------------------
 
-                cv2.putText(
-                    frame,
-                    f"Ground: {filtered_ground:.3f} m",
-                    (30, 380),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65,
-                    (255, 255, 0),
-                    2
-                )
+            cv2.putText(
+                display_frame,
+                f"Camera Forward: {filtered_camera_forward:.3f} m",
+                (30, 260),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.65,
+                (255, 255, 0),
+                2
+            )
 
-                cv2.putText(
-                    frame,
-                    f"Distance: {filtered_distance:.3f} m",
-                    (30, 415),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65,
-                    (255, 255, 0),
-                    2
-                )
+            cv2.putText(
+                display_frame,
+                f"Camera Lateral: {filtered_camera_lateral:.3f} m",
+                (30, 295),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.65,
+                (255, 255, 0),
+                2
+            )
 
-                cv2.putText(
-                    frame,
-                    f"Z: {filtered_z:.3f} m",
-                    (30, 450),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65,
-                    (255, 255, 0),
-                    2
-                )
+            cv2.putText(
+                display_frame,
+                f"Camera Yaw: {filtered_camera_yaw:.1f} deg",
+                (30, 330),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.65,
+                (255, 255, 0),
+                2
+            )
 
-                cv2.putText(
-                    frame,
-                    f"Marker width: {marker_width_px:.1f} px",
-                    (30, 485),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.65,
-                    (255, 255, 0),
-                    2
-                )
+
+            # -----------------------------------------
+            # DIAGNOSTICS
+            # -----------------------------------------
+
+            cv2.putText(
+                display_frame,
+                f"Ground: {filtered_ground:.3f} m",
+                (30, 380),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.65,
+                (255, 255, 0),
+                2
+            )
+
+            cv2.putText(
+                display_frame,
+                f"Distance: {filtered_distance:.3f} m",
+                (30, 415),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.65,
+                (255, 255, 0),
+                2
+            )
+
+            cv2.putText(
+                display_frame,
+                f"Z: {filtered_z:.3f} m",
+                (30, 450),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.65,
+                (255, 255, 0),
+                2
+            )
+
+            cv2.putText(
+                display_frame,
+                f"Marker width: {marker_width_px:.1f} px",
+                (30, 485),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.65,
+                (255, 255, 0),
+                2
+            )
 
 
         # =========================================
@@ -953,7 +988,7 @@ try:
         if not marker_found:
 
             cv2.putText(
-                frame,
+                display_frame,
                 "NO MARKER",
                 (30, 50),
                 cv2.FONT_HERSHEY_SIMPLEX,
@@ -963,13 +998,51 @@ try:
             )
 
 
+        # Reticle coordinates retain subpixel precision until display drawing.
+        frame_height, frame_width = display_frame.shape[:2]
+        optical_cx = float(new_K[0, 2])
+        optical_cy = float(new_K[1, 2])
+        frame_cx = frame_width / 2
+        frame_cy = frame_height / 2
+        dx = optical_cx - frame_cx
+        dy = optical_cy - frame_cy
+        optical_center = (int(round(optical_cx)), int(round(optical_cy)))
+        frame_center = (int(round(frame_cx)), int(round(frame_cy)))
+        optical_color = (0, 255, 255)
+        frame_color = (160, 160, 160)
+
+        # A dark outline keeps the thin optical reticle visible on bright scenes.
+        for color, thickness in (((0, 0, 0), 3), (optical_color, 1)):
+            cv2.line(display_frame, (optical_center[0], 0),
+                     (optical_center[0], frame_height - 1), color, thickness, cv2.LINE_AA)
+            cv2.line(display_frame, (0, optical_center[1]),
+                     (frame_width - 1, optical_center[1]), color, thickness, cv2.LINE_AA)
+            cv2.circle(display_frame, optical_center, 7, color, thickness, cv2.LINE_AA)
+
+        cv2.drawMarker(display_frame, frame_center, frame_color,
+                       cv2.MARKER_CROSS, 10, 1, cv2.LINE_AA)
+        # Place labels on opposite sides to separate nearby centers.
+        labels = (
+            ("OPTICAL CENTER", (optical_center[0] + 12, optical_center[1] - 14),
+             optical_color),
+            ("FRAME CENTER", (frame_center[0] + 12, frame_center[1] + 22),
+             frame_color),
+            (f"Optical - frame: dx={dx:+.2f} px  dy={dy:+.2f} px",
+             (30, frame_height - 20), optical_color),
+        )
+        for label, origin, color in labels:
+            cv2.putText(display_frame, label, origin, cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (0, 0, 0), 3, cv2.LINE_AA)
+            cv2.putText(display_frame, label, origin, cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, color, 1, cv2.LINE_AA)
+
         # =========================================
         # SHOW
         # =========================================
 
         cv2.imshow(
             "UGV Optical Navigation",
-            frame
+            display_frame
         )
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
