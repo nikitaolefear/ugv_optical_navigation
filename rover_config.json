@@ -5,7 +5,7 @@
   "camera_yaw_deg": 5.4,
   "rover_front_offset": 0.600,
 
-  "marker_size": 0.159,
+  "marker_size": 0.283,
   "target_id": 23,
 
   "resolution_width": 1280,
