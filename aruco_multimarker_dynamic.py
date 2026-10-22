@@ -322,6 +322,8 @@ CSV_FIELDS = [
     "id23_front_distance", "id23_rover_lateral", "id23_rover_yaw",
     "id24_front_distance", "id24_rover_lateral", "id24_rover_yaw",
     "detected_ids",
+    "id25_detected",
+    "id25_front_distance", "id25_rover_lateral", "id25_rover_yaw",
 ]
 POSE_KEYS = ("front_distance", "rover_lateral", "rover_yaw")
 
@@ -340,7 +342,10 @@ def main():
         stop_requested = True
 
     total_frames = 0
-    counts = {23: 0, 24: 0}
+    counts = {23: 0, 24: 0, 25: 0}
+    combination_counts = {frozenset(ids): 0 for ids in (
+        (), (23,), (24,), (25,), (23, 24), (24, 25), (23, 25), (23, 24, 25)
+    )}
     both_frames = 0
     first_only_id24_frame = None
     last_id23_frame = None
@@ -405,10 +410,11 @@ def main():
                     "FrameDuration": metadata.get("FrameDuration", ""),
                     "id23_detected": int(23 in frame_ids),
                     "id24_detected": int(24 in frame_ids),
+                    "id25_detected": int(25 in frame_ids),
                     "detected_ids": json.dumps(sorted(frame_ids)),
                 }
                 # Each marker is measured independently on this same frame.
-                for marker_id in (23, 24):
+                for marker_id in (23, 24, 25):
                     if marker_id in frame_ids:
                         index = int(np.flatnonzero(flat_ids == marker_id)[0])
                         points = corners[index][0].astype(np.float32)
@@ -423,12 +429,14 @@ def main():
                 total_frames = frame_idx
                 for marker_id in counts:
                     counts[marker_id] += int(marker_id in frame_ids)
+                detected_targets = frozenset(frame_ids.intersection(counts))
+                combination_counts[detected_targets] += 1
                 both_frames += int(23 in frame_ids and 24 in frame_ids)
                 if 24 in frame_ids and 23 not in frame_ids and first_only_id24_frame is None:
                     first_only_id24_frame = frame_idx
                 if 23 in frame_ids:
                     last_id23_frame = frame_idx
-                if 23 not in frame_ids and 24 not in frame_ids:
+                if not detected_targets:
                     current_neither_run += 1
                     longest_neither_run = max(longest_neither_run, current_neither_run)
                 else:
@@ -451,12 +459,20 @@ def main():
             print(f"total_frames={total_frames}")
             print(f"ID23_detected_frames={counts[23]}")
             print(f"ID24_detected_frames={counts[24]}")
+            print(f"ID25_detected_frames={counts[25]}")
+            print(f"all_three_detected_frames={combination_counts[frozenset((23, 24, 25))]}")
+            print(f"ID23_ID24_only_frames={combination_counts[frozenset((23, 24))]}")
+            print(f"ID24_ID25_only_frames={combination_counts[frozenset((24, 25))]}")
+            print(f"ID23_ID25_only_frames={combination_counts[frozenset((23, 25))]}")
+            # Preserve the legacy inclusive ID23+ID24 counter and percentage.
             print(f"both_detected_frames={both_frames}")
-            print(f"only_ID23_frames={counts[23] - both_frames}")
-            print(f"only_ID24_frames={counts[24] - both_frames}")
-            print(f"neither_frames={total_frames - counts[23] - counts[24] + both_frames}")
+            print(f"only_ID23_frames={combination_counts[frozenset((23,))]}")
+            print(f"only_ID24_frames={combination_counts[frozenset((24,))]}")
+            print(f"only_ID25_frames={combination_counts[frozenset((25,))]}")
+            print(f"neither_frames={combination_counts[frozenset()]}")
             print(f"ID23_detection_percent={percent(counts[23]):.2f}%")
             print(f"ID24_detection_percent={percent(counts[24]):.2f}%")
+            print(f"ID25_detection_percent={percent(counts[25]):.2f}%")
             print(f"both_detection_percent={percent(both_frames):.2f}%")
             print(f"first_only_ID24_frame={first_only_id24_frame}")
             print(f"last_ID23_frame={last_id23_frame}")

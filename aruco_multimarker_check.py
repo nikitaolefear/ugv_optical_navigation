@@ -152,7 +152,15 @@ def main():
     total_frames = 0
     id23_frames = 0
     id24_frames = 0
-    both_frames = 0
+    id25_frames = 0
+    all_three_frames = 0
+    frames_only_23 = 0
+    frames_only_24 = 0
+    frames_only_25 = 0
+    frames_23_24_only = 0
+    frames_24_25_only = 0
+    frames_23_25_only = 0
+    frames_neither = 0
     all_detected_ids = set()
     stop_requested = False
     picam2 = None
@@ -202,7 +210,16 @@ def main():
             total_frames += 1
             id23_frames += int(23 in frame_ids)
             id24_frames += int(24 in frame_ids)
-            both_frames += int(23 in frame_ids and 24 in frame_ids)
+            id25_frames += int(25 in frame_ids)
+            target_ids = frame_ids & {23, 24, 25}
+            all_three_frames += int(target_ids == {23, 24, 25})
+            frames_only_23 += int(target_ids == {23})
+            frames_only_24 += int(target_ids == {24})
+            frames_only_25 += int(target_ids == {25})
+            frames_23_24_only += int(target_ids == {23, 24})
+            frames_24_25_only += int(target_ids == {24, 25})
+            frames_23_25_only += int(target_ids == {23, 25})
+            frames_neither += int(not target_ids)
             all_detected_ids.update(frame_ids)
     finally:
         try:
@@ -220,14 +237,20 @@ def main():
             print(f"total_frames={total_frames}")
             print(f"ID23_detected_frames={id23_frames}")
             print(f"ID24_detected_frames={id24_frames}")
-            print(f"both_23_and_24_detected_frames={both_frames}")
+            print(f"ID25_detected_frames={id25_frames}")
             print(f"ID23_detection_percent={percent(id23_frames):.2f}%")
             print(f"ID24_detection_percent={percent(id24_frames):.2f}%")
-            print(f"both_detection_percent={percent(both_frames):.2f}%")
+            print(f"ID25_detection_percent={percent(id25_frames):.2f}%")
+            print(f"all_three_detected_frames={all_three_frames}")
+            print(f"all_three_detection_percent={percent(all_three_frames):.2f}%")
+            print(f"frames_only_23={frames_only_23}")
+            print(f"frames_only_24={frames_only_24}")
+            print(f"frames_only_25={frames_only_25}")
+            print(f"frames_23_24_only={frames_23_24_only}")
+            print(f"frames_24_25_only={frames_24_25_only}")
+            print(f"frames_23_25_only={frames_23_25_only}")
+            print(f"frames_neither={frames_neither}")
             print(f"all_detected_ids={sorted(all_detected_ids)}")
-            print(f"frames_only_23={id23_frames - both_frames}")
-            print(f"frames_only_24={id24_frames - both_frames}")
-            print(f"frames_neither={total_frames - id23_frames - id24_frames + both_frames}")
 
 
 if __name__ == "__main__":
