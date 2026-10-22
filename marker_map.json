@@ -1,25 +1,20 @@
 {
   "version": 1,
-  "frame": "warehouse",
-  "units": "m",
-
-  "aruco": {
-    "dictionary": "DICT_5X5_1000",
-    "default_marker_size": 0.159
-  },
-
-  "coordinate_system": {
-    "x_positive": "forward",
-    "y_positive": "right",
-    "yaw_positive": "clockwise"
-  },
-
-  "markers": {
-    "23": {
-      "x": 0.0,
-      "y": 0.0,
-      "yaw_deg": 0.0,
-      "enabled": true
+  "markers": [
+    {
+      "id": 23,
+      "global_x": 3.000,
+      "placement": "floor"
+    },
+    {
+      "id": 24,
+      "global_x": 4.000,
+      "placement": "floor"
+    },
+    {
+      "id": 25,
+      "global_x": 5.000,
+      "placement": "floor"
     }
-  }
+  ]
 }
