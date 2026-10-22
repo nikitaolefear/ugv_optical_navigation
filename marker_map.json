@@ -1,20 +1,50 @@
 {
-  "version": 1,
+  "version": 2,
+  "coordinate_frame": "HOME_FRONT_DATUM",
+  "position_unit": "m",
+  "orientation_unit": "deg",
   "markers": [
     {
       "id": 23,
-      "global_x": 3.000,
-      "placement": "floor"
+      "placement": "floor",
+      "position": {
+        "x": 3.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "orientation": {
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0
+      }
     },
     {
       "id": 24,
-      "global_x": 4.000,
-      "placement": "floor"
+      "placement": "floor",
+      "position": {
+        "x": 4.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "orientation": {
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0
+      }
     },
     {
       "id": 25,
-      "global_x": 5.000,
-      "placement": "floor"
+      "placement": "floor",
+      "position": {
+        "x": 5.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "orientation": {
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0
+      }
     }
   ]
 }
