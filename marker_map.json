@@ -15,7 +15,7 @@
       "orientation": {
         "roll": 0.0,
         "pitch": 0.0,
-        "yaw": 0.0
+        "yaw": -90.0
       }
     },
     {
@@ -29,7 +29,7 @@
       "orientation": {
         "roll": 0.0,
         "pitch": 0.0,
-        "yaw": 0.0
+        "yaw": -90.0
       }
     },
     {
@@ -43,7 +43,7 @@
       "orientation": {
         "roll": 0.0,
         "pitch": 0.0,
-        "yaw": 0.0
+        "yaw": -90.0
       }
     }
   ]
