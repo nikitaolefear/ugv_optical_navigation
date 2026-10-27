@@ -474,6 +474,30 @@ CSV_FIELDS += [f"shadow_{frame}_world_{component}"
                for component in ("x", "y", "z", "roll", "pitch", "yaw")]
 CSV_FIELDS += ["shadow_minus_v7_x", "shadow_minus_v7_lateral", "shadow_minus_v7_yaw",
                "shadow_3d_error"]
+CSV_FIELDS += ["shadow_raw_subpix_mean_corner_shift_px", "shadow_T_world_camera",
+               "shadow_forward_heading_deg"]
+
+
+def refine_shadow_corners(gray, raw_points, dictionary):
+    """Copy canonical corners; match ArUco SUBPIX's adaptive window (OpenCV 4.10).
+
+    aruco_live.py sets only CORNER_REFINE_SUBPIX on default DetectorParameters.
+    ArUco caps its window by relativeCornerRefinmentWinSize * average module
+    size, then calls cornerSubPix with these same iteration/accuracy settings.
+    """
+    parameters = cv2.aruco.DetectorParameters()
+    parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+    refined = raw_points.copy()
+    edges = np.linalg.norm(raw_points - np.roll(raw_points, -1, axis=0), axis=1)
+    module_size = np.float32(edges.sum() / (4 * (dictionary.markerSize + 2 * parameters.markerBorderBits)))
+    window = min(parameters.cornerRefinementWinSize, max(1, int(np.rint(
+        np.float32(parameters.relativeCornerRefinmentWinSize) * module_size))))
+    cv2.cornerSubPix(
+        gray, refined, (window, window), (-1, -1),
+        (cv2.TERM_CRITERIA_MAX_ITER | cv2.TERM_CRITERIA_EPS,
+         parameters.cornerRefinementMaxIterations, parameters.cornerRefinementMinAccuracy),
+    )
+    return refined
 
 
 def shadow_diagnostics(pose_source, observations):
@@ -483,10 +507,15 @@ def shadow_diagnostics(pose_source, observations):
     With incomplete extrinsics only camera fields are populated. Rover fields
     and deltas intentionally remain empty. No shadow result feeds navigation.
     """
+    import json
+    import math
+    import numpy as np
+
     values = {"shadow_3d_valid": 0}
     if pose_source is None or pose_source not in observations:
         return values
     values["shadow_marker_id"] = pose_source
+    values["shadow_raw_subpix_mean_corner_shift_px"] = observations.get((pose_source, "corner_shift"), "")
     try:
         T_world_marker = marker_map_entry_to_world_transform(MARKER_BY_ID[pose_source])
         T_world_camera = compose_transform(
@@ -494,6 +523,10 @@ def shadow_diagnostics(pose_source, observations):
         )
         translation = extract_translation(T_world_camera)
         angles = rotation_matrix_to_euler_deg(T_world_camera[:3, :3])
+        values["shadow_T_world_camera"] = json.dumps(T_world_camera.tolist())
+        forward = T_world_camera[:3, 2]
+        if np.linalg.norm(forward[:2]) > 1e-10:
+            values["shadow_forward_heading_deg"] = math.degrees(math.atan2(forward[1], forward[0]))
         for key, value in zip(("x", "y", "z", "roll", "pitch", "yaw"),
                               (*translation, *angles)):
             values[f"shadow_camera_world_{key}"] = float(value)
@@ -647,7 +680,15 @@ def main():
                                    ("front_distance", "rover_lateral", "rover_yaw")):
                                 poses[marker_id] = pose
                                 try:
-                                    observations[marker_id] = rvec_tvec_to_transform(rvec, tvec)
+                                    refined = refine_shadow_corners(gray, points, dictionary)
+                                    shadow_success, shadow_rvec, shadow_tvec = cv2.solvePnP(
+                                        object_points, refined, new_K, zero_dist,
+                                        flags=cv2.SOLVEPNP_IPPE_SQUARE,
+                                    )
+                                    if not shadow_success:
+                                        raise ValueError("Shadow solvePnP returned false")
+                                    observations[marker_id] = rvec_tvec_to_transform(shadow_rvec, shadow_tvec)
+                                    observations[(marker_id, "corner_shift")] = float(np.linalg.norm(refined - points, axis=1).mean())
                                 except (ValueError, cv2.error):
                                     pass  # Shadow failure must not affect validated V7 pose.
 
