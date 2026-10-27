@@ -1,7 +1,38 @@
 __pycache__/
 *.pyc
+
+# Measurement and diagnostic data
+*.csv
+
+# Images / diagnostic captures
+*.jpg
+*.jpeg
+*.png
+
+# Local backups
+*.bak.*
+marker_map_before_*.json
+marker_map_v1_before_v7.json
+rover_config.json.bak.*
+
+# Captured frame directories
+dynamic_frames_*/
+dynamic_review/
+pose_transition_frames*/
+rejected_diag_frames_*/
+
+# Accidental temporary files
+/23
+/23:
+/24:
+/25
+/25:
+/=
+/next
+/previous
+
+# Python / editor / OS artifacts
 *.pyo
 *.log
 .vscode/
 .DS_Store
-measurements.csv
