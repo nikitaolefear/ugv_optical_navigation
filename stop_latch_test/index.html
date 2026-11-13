@@ -1,0 +1,6 @@
+<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GPIO17 · STOP_LATCH TEST</title><script src="/app.js" defer></script></head><body>
+<h1>STOP_LATCH · тест GPIO17</h1><p>Лише тест станів. Команд Pixhawk і фізичного руху немає. lo = натиснуто, hi = відпущено.</p>
+<p id="connection">Очікування</p><p>Контакт: <strong id="contact">UNKNOWN</strong></p><p>Блокування: <strong id="latch">UNKNOWN</strong></p><p>Тестовий стан: <strong id="run">UNKNOWN</strong></p><p id="probe"></p>
+<p><button data-action="reset">RESET</button> <button data-action="start">START TEST</button> <button data-action="pause">PAUSE TEST</button> <button data-action="resume">RESUME TEST</button> <button data-action="stop">STOP TEST</button></p>
+<button data-action="arm_reset_probe">Спробувати RESET при наступному натисканні</button><p id="result" role="status"></p>
+<h2>Журнал переходів</h2><p>Після повернення з бампера перегляньте CONTACT_PRESSED, RESET_REJECTED та CONTACT_RELEASED. Відпускання не знімає блокування. RESET не запускає START.</p><pre id="events"></pre></body></html>
