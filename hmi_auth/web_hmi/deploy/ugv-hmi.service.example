@@ -1,0 +1,27 @@
+# Review against the existing unit. Do not install/start without separate approval.
+[Unit]
+Description=UGV authenticated HMI (DEMO + passive Pixhawk)
+After=network.target
+
+[Service]
+Type=simple
+User=ugvs2
+Group=ugvs2
+SupplementaryGroups=dialout
+WorkingDirectory=/home/ugvs2/ugv_optical_navigation
+EnvironmentFile=/home/ugvs2/.config/ugv-hmi/auth.env
+ExecStart=/home/ugvs2/.venv/bin/gunicorn --config python:web_hmi.gunicorn_conf web_hmi.wsgi:create_wsgi_app()
+UMask=0077
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=20
+StandardOutput=journal
+StandardError=journal
+LogRateLimitIntervalSec=60
+LogRateLimitBurst=100
+# Do not enable NoNewPrivileges, PrivateUsers, ProtectProc=invisible or ProcSubset=pid:
+# the existing narrowly granted sudo helper needs host /proc and its approved privilege.
+
+[Install]
+WantedBy=multi-user.target

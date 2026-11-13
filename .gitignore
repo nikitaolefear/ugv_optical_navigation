@@ -36,3 +36,22 @@ rejected_diag_frames_*/
 *.log
 .vscode/
 .DS_Store
+
+# Private runtime state and credentials (also excluded from checkpoint export)
+*.sqlite*
+*.db
+*.key
+*.pem
+.env
+.env.*
+!.env.example
+*.env
+!*.env.example
+.venv*/
+venv/
+.ssh/
+*.tlog
+*.BIN
+*backup*/
+*BACKUP*
+*.tar.gz

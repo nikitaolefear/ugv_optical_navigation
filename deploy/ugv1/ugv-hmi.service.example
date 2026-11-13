@@ -1,0 +1,19 @@
+# /etc/systemd/system/ugv-hmi.service
+[Unit]
+Description=UGV HMI read-only Pixhawk telemetry
+After=network.target
+
+[Service]
+Type=simple
+User=ugvs2
+Group=ugvs2
+WorkingDirectory=/home/ugvs2/ugv_optical_navigation
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/ugvs2/.venv/bin/python -u web_hmi/app.py --host 127.0.0.1 --port 8082 --telemetry --telemetry-owner-helper
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

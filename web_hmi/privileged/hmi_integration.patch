@@ -1,0 +1,53 @@
+--- a/web_hmi/pixhawk_telemetry.py
++++ b/web_hmi/pixhawk_telemetry.py
+@@ -98,7 +98,7 @@
+     raise PortFailure('PORT_CHECK_FAILED', stage, port, 'Unverifiable fuser result', result=result)
+ 
+ 
+-def open_passive(port=PORT, baud=115200):
++def open_passive(port=PORT, baud=115200, *, owner_check=None):
+     """Refuse unverifiable ownership, retain O_RDONLY/flock/TIOCEXCL/recheck.
+ 
+     A router is required for sharing. Privileged, uncooperative openers cannot
+@@ -108,7 +108,8 @@
+     try:
+         with port_stage('tty_stat', port):
+             os.stat(port)  # unlike exists(), preserves permission errors
+-        result = port_users(port, 'fuser_before')
++        result = (port_users(port, 'fuser_before') if owner_check is None
++                  else owner_check(port, 'fuser_before', None))
+         owners = checked_owners(result, port, 'fuser_before')
+         if owners:
+             raise PortFailure('PORT_BUSY', 'fuser_before', port, 'Port already open',
+@@ -119,7 +120,8 @@
+             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+         with port_stage('tioc_excl', port):
+             fcntl.ioctl(fd, termios.TIOCEXCL)
+-        check = port_users(port, 'fuser_after')
++        check = (port_users(port, 'fuser_after') if owner_check is None
++                 else owner_check(port, 'fuser_after', fd))
+         owners = checked_owners(check, port, 'fuser_after')
+         if owners != {os.getpid()}:
+             raise PortFailure('PORT_CHECK_FAILED', 'fuser_after', port,
+--- a/web_hmi/app.py
++++ b/web_hmi/app.py
+@@ -57,9 +57,19 @@
+     parser.add_argument('--host', default='127.0.0.1')
+     parser.add_argument('--port', type=int, default=8081)
+     parser.add_argument('--telemetry', action='store_true', help='Enable passive serial reading; never sends MAVLink')
++    parser.add_argument('--telemetry-owner-helper', action='store_true',
++                        help='Use the fixed privileged ownership checker; Flask stays unprivileged')
+     args = parser.parse_args()
++    if args.telemetry_owner_helper and not args.telemetry:
++        parser.error('--telemetry-owner-helper requires --telemetry')
+     if args.telemetry:
+         reader = app.extensions['pixhawk_telemetry']
++        if args.telemetry_owner_helper:
++            try:
++                from .pixhawk_owner_client import open_with_owner_helper
++            except ImportError:
++                from pixhawk_owner_client import open_with_owner_helper
++            reader.opener = open_with_owner_helper
+         reader.start()
+         atexit.register(reader.close)
+     app.run(host=args.host, port=args.port, debug=False, use_reloader=False)

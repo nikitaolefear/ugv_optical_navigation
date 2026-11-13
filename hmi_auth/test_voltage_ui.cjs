@@ -1,0 +1,22 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+let now=0;
+const elements = new Map();
+const element = id => {
+  if (!elements.has(id)) elements.set(id, {textContent:'',disabled:false});
+  return elements.get(id);
+};
+const context = vm.createContext({document:{getElementById:element,body:{dataset:{}},addEventListener(){}},performance:{now:()=>now},setInterval(){},setTimeout(){},console});
+vm.runInContext(fs.readFileSync(__dirname+'/web_hmi/static/app.js','utf8'),context);
+vm.runInContext("voltagePacket = {state:'FRESH', value:63.68, source:'Вхід ESC №3', age_s:0.9, renderedAt:0}; renderVoltage()",context);
+assert.equal(element('voltage').textContent,'63.68 V');
+assert.equal(element('voltage-source').textContent,'Вхід ESC №3');
+now=2200; vm.runInContext('renderVoltage()',context);
+assert.equal(element('voltage').textContent,'Застаріло');
+assert.equal(element('voltage-age').textContent,'(3.1 с)');
+vm.runInContext("voltagePacket = {state:'FRESH', value:63.68, source:'Вхід ESC №3', age_s:0.5, renderedAt:performance.now()}; unavailableTelemetry()",context);
+assert.equal(element('voltage').textContent,'Застаріло');
+vm.runInContext("voltagePacket = {state:'UNKNOWN',value:null,source:null,age_s:null,renderedAt:performance.now()}; renderVoltage()",context);
+assert.equal(element('voltage').textContent,'Немає даних');
+console.log('UI: units, source, advancing age, 3-second expiry, failed fetch, missing data: OK');

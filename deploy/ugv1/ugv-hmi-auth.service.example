@@ -1,0 +1,24 @@
+# /etc/systemd/system/ugv-hmi-auth.service
+[Unit]
+Description=UGV authenticated HMI Gunicorn (no serial reader)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ugvs2
+Group=ugvs2
+WorkingDirectory=/home/ugvs2/ugv-hmi-auth-password8-release
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=UGV_HMI_STATE_DIR=/home/ugvs2/.local/state/ugv-hmi
+Environment=UGV_HMI_PUBLIC_ORIGIN=https://192.168.110.59
+Environment=UGV_HMI_TRUST_PROXY=1
+Environment=UGV_HMI_TELEMETRY=0
+UnsetEnvironment=GUNICORN_CMD_ARGS
+ExecStart=/home/ugvs2/.venv-ugv-hmi-auth/bin/python /home/ugvs2/.venv-ugv-hmi-auth/bin/gunicorn --config python:web_hmi.gunicorn_conf --bind 127.0.0.1:8083 "web_hmi.wsgi:create_wsgi_app()"
+Restart=on-failure
+RestartSec=3
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

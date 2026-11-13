@@ -1,0 +1,19 @@
+<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Вхід — UGV №1</title><link rel="stylesheet" href="/static/style.css?v=login-fields-20261113-1"></head>
+<body><main class="login-page"><h1>Вхід до UGV №1</h1><section class="login-panel"><p>Особистий обліковий запис. Реєстрацію виконує локальний адміністратор.</p>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form class="login-form" method="post" action="/login"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+<div class="login-field"><label for="login-username">Логін</label><input id="login-username" name="username" autocomplete="username" required maxlength="64" autofocus></div>
+<div class="login-field"><label for="login-password">Пароль</label><div class="login-password-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" required aria-describedby="password-policy"><button id="login-password-toggle" class="login-password-toggle" type="button" aria-controls="login-password" aria-pressed="false">Показати</button></div></div>
+<p id="password-policy">Нові паролі: 8–128 символів включно. Дозволені літери, цифри, пробіли та спецсимволи, без обов’язкових класів. Пробіли на початку й у кінці зберігаються.</p>
+<button class="login-submit" type="submit">Увійти</button></form></section></main>
+<script nonce="{{ login_script_nonce }}">
+'use strict';
+const passwordField = document.getElementById('login-password');
+const passwordToggle = document.getElementById('login-password-toggle');
+passwordToggle.addEventListener('click', () => {
+  const reveal = passwordField.type === 'password';
+  passwordField.type = reveal ? 'text' : 'password';
+  passwordToggle.textContent = reveal ? 'Приховати' : 'Показати';
+  passwordToggle.setAttribute('aria-pressed', String(reveal));
+});
+</script></body></html>

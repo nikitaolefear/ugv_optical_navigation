@@ -1,0 +1,2 @@
+# Draft only. Install after review; exact executable, no command-line arguments.
+ugvs2 ALL=(root) NOPASSWD: NOSETENV: /usr/local/libexec/ugv-pixhawk-owners ""
