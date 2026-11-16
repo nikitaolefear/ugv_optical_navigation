@@ -25,11 +25,15 @@ def post_worker_init(worker):
     from web_hmi.runtime import start_hmi, start_telemetry
     app = worker.wsgi
     start_hmi(app)
+    from web_hmi.technical_telemetry_log import start_technical_log
+    start_technical_log(app)
     if os.environ.get('UGV_HMI_TELEMETRY') == '1':
         start_telemetry(app)
 
 
 def worker_exit(server, worker):
     if getattr(worker, 'wsgi', None):
+        from web_hmi.technical_telemetry_log import stop_technical_log
+        stop_technical_log(worker.wsgi)
         from web_hmi.runtime import stop_telemetry
         stop_telemetry(worker.wsgi)

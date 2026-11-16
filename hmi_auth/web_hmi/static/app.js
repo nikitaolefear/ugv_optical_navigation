@@ -74,7 +74,7 @@ function renderVoltage() {
 function unavailableTelemetry() {
   if (voltagePacket) voltagePacket.state = 'STALE';
   renderVoltage();
-  for (const id of ['connection', 'armed', 'flight-mode', 'yaw', 'ekf', 'freshness']) el(id).textContent = 'STALE';
+  for (const id of ['connection', 'armed', 'flight-mode', 'yaw']) el(id).textContent = 'STALE';
 }
 async function pollTelemetry() {
   try {
@@ -91,8 +91,6 @@ async function pollTelemetry() {
     voltagePacket = {...s.voltage_v, ...s.voltage_detail, renderedAt: performance.now()};
     renderVoltage();
     el('yaw').textContent = telemetryField(s.yaw_deg, v => `${v.toFixed(1)}°`);
-    el('ekf').textContent = Object.entries(s.ekf).map(([k,v]) => `${k}: ${telemetryField(v, x => 'flags=' + x.flags)}`).join(' · ');
-    el('freshness').textContent = Object.entries(s.messages).map(([k,v]) => `${k}: ${v.state}${v.age_s === null ? '' : ' (' + v.age_s + ' s)'}`).join(' · ');
   } catch (_) { unavailableTelemetry(); }
   setTimeout(pollTelemetry, 500);
 }

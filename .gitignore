@@ -55,3 +55,9 @@ venv/
 *backup*/
 *BACKUP*
 *.tar.gz
+
+# Private HMI runtime telemetry; implementation remains tracked
+telemetry-technical.jsonl*
+*.sqlite3-wal
+*.sqlite3-shm
+*.before-*

@@ -1,13 +1,11 @@
 <!doctype html>
 <html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="csrf-token" content="{{ csrf }}"><title>UGV №1 — HMI v0.3</title><link rel="stylesheet" href="/static/style.css"><script src="/static/account.js" defer></script><script src="/static/app.js?v=telemetry-bridge-20261113" defer></script></head>
+<meta name="csrf-token" content="{{ csrf }}"><title>UGV №1 — HMI v0.3</title><link rel="stylesheet" href="/static/style.css"><script src="/static/account.js" defer></script><script src="/static/app.js?v=telemetry-no-freshness-20261116" defer></script></head>
 <body data-control="{{ 'yes' if can('demo.control') else 'no' }}" data-status="{{ 'yes' if can('status.view') else 'no' }}" data-telemetry="{{ 'yes' if can('telemetry.view') else 'no' }}"><main>{% include 'account.html' %}<h1>UGV №1 <small>HMI v0.3</small></h1>
 <aside><strong>DEMO + PIXHAWK READ-ONLY</strong><p>Реальне керування відсутнє. CAN має залишатися фізично відключеним.</p></aside>
 <section><h2>Pixhawk 6C · READ-ONLY</h2>
 <p>CONNECTION: <b id="connection">UNKNOWN</b></p>
 <div class="metrics"><p>ARM/DISARM: <b id="armed">UNKNOWN</b></p><p>Flight mode: <b id="flight-mode">UNKNOWN</b></p><p>АКБ: <b id="voltage">Немає даних</b> <span id="voltage-source"></span> <span id="voltage-age"></span></p><p>Yaw: <b id="yaw">UNKNOWN</b></p></div>
-<p>EKF (отримані прапорці, без дозволу руху): <span id="ekf">UNKNOWN</span></p>
-<p id="freshness">UNKNOWN</p>
 <p>Усі кнопки нижче керують лише DEMO. Телеметрія не забезпечує DISARM і не надає дозволу руху. Ровер має залишатися DISARMED, CAN — фізично відключеним. Камера, фізична позиція та швидкість недоступні.</p></section>
 {% if not can('demo.control') %}<p role="status">Режим перегляду. Керування DEMO недоступне.</p>{% endif %}<section><h2>Місія симулятора</h2><label for="mission">Оберіть маршрут</label><select id="mission" disabled><option value="1">№1 · A → B · уперед</option><option value="2">№2 · B → A · назад без розвороту</option></select>
 <p>Умовний маршрут: 10 м. Напрямок корпусу незмінний: 0°.</p>

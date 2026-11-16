@@ -1,0 +1,233 @@
+{
+  "date": "2026-11-16",
+  "base": "19abc112684604f1bac6dbdb9c698c0e76bdfb21",
+  "release": "/home/ugvs2/ugv-hmi-auth-password8-release",
+  "files": {
+    "tools/browser_access_check.py": {
+      "sha256": "250d3ff6c4ff2f92a7fff8f14e752d8ce5a075e17e595d5a91e040125be378fa",
+      "matches_live": true
+    },
+    "tools/test_hmi_process.py": {
+      "sha256": "8129b4cb20e7ad463546e01d5206e8ecf565bd280ba6488d55980c497677d3d7",
+      "matches_live": true
+    },
+    "web_hmi/README_v02.md": {
+      "sha256": "e36d5ffb090d24ffc84aaf4e5c50f4fd319dc8dd1b5f706eb53f286599dd11e2",
+      "matches_live": true
+    },
+    "web_hmi/README_v03.md": {
+      "sha256": "d3cad04d359dff9f84b90b60c5939c7f0abfdf945c0c6de85b56a3a6ff5d71cf",
+      "matches_live": true
+    },
+    "web_hmi/access_control.py": {
+      "sha256": "7e3d8e5fc41db41b45d58866b42bee49d584e19421e0b76e602ff3f398b55005",
+      "matches_live": true
+    },
+    "web_hmi/access_migration.py": {
+      "sha256": "26533c1643f80c79de52bc9259c54276167054e2db63b2324a99713525c298ce",
+      "matches_live": true
+    },
+    "web_hmi/admin_cli.py": {
+      "sha256": "2cd339ee2ab4a14db8e81457d286e3f11015b01990b82e9b48c486e24f0dd435",
+      "matches_live": true
+    },
+    "web_hmi/app.py": {
+      "sha256": "6cf7fb6854f3284182a645831cad0a3a18429aa5f47313a103283db8aeafee09",
+      "matches_live": true
+    },
+    "web_hmi/auth.py": {
+      "sha256": "d2c9025d221127723d1a51cb5fab1740ef2d305c91fb811bbcc65932766b279e",
+      "matches_live": true
+    },
+    "web_hmi/deploy/README_AUTH.md": {
+      "sha256": "e01771d915c58dd5292905ef372b4c517d2c7a8bad97149180d77a325778aa74",
+      "matches_live": true
+    },
+    "web_hmi/deploy/README_PASSWORD8.md": {
+      "sha256": "89cebd3c6485d8b9d979cabad527285e8ddf1cc689e2ff66e20db153f6debb56",
+      "matches_live": true
+    },
+    "web_hmi/deploy/README_PERIODS_V2.md": {
+      "sha256": "4233e5adec2dcf749c60a4bd830869d38c5b5f5d434ac2cd556ceeaa6ff9fcf1",
+      "matches_live": true
+    },
+    "web_hmi/deploy/nginx-ugv-hmi.conf.example": {
+      "sha256": "04cc69126d88322c15b1cd7b45299215587e1681c27bec0b56d16b2c865042f5",
+      "matches_live": true
+    },
+    "web_hmi/deploy/ugv-hmi.service.example": {
+      "sha256": "7049919b06dd3d0301d36a80be36521aa1ebd7e51ed5c996fe3edb6de3676ea7",
+      "matches_live": true
+    },
+    "web_hmi/gunicorn_conf.py": {
+      "sha256": "e6288cd855d22edcf1f75cbff9880a16f851c101f90dd9d8a7a894aa10aed3b0",
+      "matches_live": true
+    },
+    "web_hmi/mission_statistics.py": {
+      "sha256": "8b37baab684e3d6491a65a1b34eb44e03eedaa11c15f640ebe28063257fc4816",
+      "matches_live": true
+    },
+    "web_hmi/pixhawk_owner_client.py": {
+      "sha256": "43e7b73d15aa2c6883f39c4df491e2e235ab986656d9b840c68b62e0dc95f07f",
+      "matches_live": true
+    },
+    "web_hmi/pixhawk_telemetry.py": {
+      "sha256": "27843c049f344133637923733b6658c64b82abdad75a22afa001be8876ab5a18",
+      "matches_live": true
+    },
+    "web_hmi/privileged/README_owner_helper.md": {
+      "sha256": "3c3e119c213057e9e95b6842521a9229c58a5db7aa68b2be4162013960c39da3",
+      "matches_live": true
+    },
+    "web_hmi/privileged/hmi_integration.patch": {
+      "sha256": "c783fe6d178d2855ad30102e2a265e701601d3644b00eb56f7622cab93a08516",
+      "matches_live": true
+    },
+    "web_hmi/privileged/pixhawk_owners.py": {
+      "sha256": "b63c4830a1a88943abe020791c717e1f7d5a239aa5a2784bbdd38d8f5ed7505a",
+      "matches_live": true
+    },
+    "web_hmi/privileged/ugv-pixhawk-owners.sudoers": {
+      "sha256": "a7ecab8e844b0b0bcf531f135eeafc324abf3fba66edc48352f0ced30c35d1c0",
+      "matches_live": true
+    },
+    "web_hmi/requirements_production.txt": {
+      "sha256": "a21fac1462e1d322d153518390ef253fecfb8d6e36c9a9f1fd08413f3da4b28d",
+      "matches_live": true
+    },
+    "web_hmi/requirements_v03.txt": {
+      "sha256": "9c443e363d30e1d5f5fdb5dc5ef2c76187b1d88420aa465e2b8d858dfd5ed8c4",
+      "matches_live": true
+    },
+    "web_hmi/runtime.py": {
+      "sha256": "9fb259c4ed1783544f0aa6016d5a646aeb5dd988b15228362bc145c6f8c98394",
+      "matches_live": true
+    },
+    "web_hmi/simulator.py": {
+      "sha256": "4da3533df9973359f77a203969f11b443951aaa5c66a789f0f81b39d9734b0cd",
+      "matches_live": true
+    },
+    "web_hmi/static/access.js": {
+      "sha256": "778d32af5b6a202d4439816eeccc5bf12952279357f174866c090da59ca84c0f",
+      "matches_live": true
+    },
+    "web_hmi/static/account.js": {
+      "sha256": "b9fd6524135d72f6bc8e947541fb1d1daf1e4995d5ab6d50e778eca1158da9bc",
+      "matches_live": true
+    },
+    "web_hmi/static/app.js": {
+      "sha256": "d35142e107ccb7ba79ded7fd1a05c3c36cd0fb88982bc6267def946f383e51ae",
+      "matches_live": true
+    },
+    "web_hmi/static/audit.js": {
+      "sha256": "d6a4bfe6dc3aa97dbec4e16b105acc42291c2dc85fb84712f3ef4c1ed5c0a7bc",
+      "matches_live": true
+    },
+    "web_hmi/static/statistics.js": {
+      "sha256": "9b66508bf97e7bedce0f4ee576f168d822bff62c8889a87ef1a133f9493de536",
+      "matches_live": true
+    },
+    "web_hmi/static/style.css": {
+      "sha256": "ff77a72a4a7483d68802b1c9a20f80e2d5a9dd4691e37196e33faf3a09584a69",
+      "matches_live": true
+    },
+    "web_hmi/technical_telemetry_log.py": {
+      "sha256": "ec4297bce3d947c6715f9ceb678a67e6be13f8726d61537a270b9c4127baefa2",
+      "matches_live": true
+    },
+    "web_hmi/telemetry_bridge.py": {
+      "sha256": "f5d41bfeabbc9d6be3b02f28ef12a1b528249c474c172c68b0efcba5b520fa4a",
+      "matches_live": true
+    },
+    "web_hmi/templates/access.html": {
+      "sha256": "c95e5725a85f7889b8aaad6452e973ccf2752f69e10775d14fb445d03519d20f",
+      "matches_live": true
+    },
+    "web_hmi/templates/account.html": {
+      "sha256": "5cdda86de3589342e5ab3df7fbf79dc6ad15b269ff798d4b3f09028302c71880",
+      "matches_live": true
+    },
+    "web_hmi/templates/audit.html": {
+      "sha256": "ff6478d027ce07a6cb3bebfb4a1568dc2a3206df20c04178c73e9f7497e9a1d3",
+      "matches_live": true
+    },
+    "web_hmi/templates/error.html": {
+      "sha256": "93c01cbf7c209271b4b3d22adbe5f2bec74a0442ebbb9d8dbad9a82db4bfdc75",
+      "matches_live": true
+    },
+    "web_hmi/templates/index.html": {
+      "sha256": "df5585714d77ca25bf6c7be41bf1a1504903a989e8c01c380c589d2758c3dddb",
+      "matches_live": true
+    },
+    "web_hmi/templates/login.html": {
+      "sha256": "342ceddbf17695aa3a4ceee7f1f757699ed587adb644ab3b33cd1c3e882f94df",
+      "matches_live": true
+    },
+    "web_hmi/templates/profile.html": {
+      "sha256": "a8cb9cefb23f96e1be06b9c8fb30a1a6f162948cd6369314ab66d41881e530c1",
+      "matches_live": true
+    },
+    "web_hmi/templates/statistics.html": {
+      "sha256": "e90f1240f166e6c3d0c74104a7cb22327b91b915e57b5f7cbddf01c300334840",
+      "matches_live": true
+    },
+    "web_hmi/test_access.py": {
+      "sha256": "1e97adf0a8258e3da00e1ee5c2e8731fa28b6921fa885d348a1f5b8fb57683ac",
+      "matches_live": true
+    },
+    "web_hmi/test_auth.py": {
+      "sha256": "6be9bf43c5b03a1ced8b6d7bb5e4a9d32c3729f81ee4e6cac3eae13b438f6d55",
+      "matches_live": true
+    },
+    "web_hmi/test_csrf_cli.py": {
+      "sha256": "10025aea5f505a4b36f1d2ae7fad8c70265b49da3c229f61d94d171976c3bf2d",
+      "matches_live": true
+    },
+    "web_hmi/test_csrf_diagnostic.py": {
+      "sha256": "dd4af1b3da340643811414dbc79d82147515f3f39f2c1af19941a92179b5b55c",
+      "matches_live": true
+    },
+    "web_hmi/test_hmi.py": {
+      "sha256": "1fdd526015219db71e99ea6abff9244261ccfcdd278fa24bd0981e4a668b6157",
+      "matches_live": true
+    },
+    "web_hmi/test_mission_statistics.py": {
+      "sha256": "ee745e7889427d028daa5b22a37fef2d91bef0510a775a78cfca30e44ca60c18",
+      "matches_live": true
+    },
+    "web_hmi/test_origin_diagnostic.py": {
+      "sha256": "f971d628086235a6bb93cd6c7787c2a55b096b4ec69b7b8aca3e1d7e6b26f549",
+      "matches_live": true
+    },
+    "web_hmi/test_password_policy.py": {
+      "sha256": "73941379ddf572a7093dc1ff6c80fd230f3421f18b17d99b1561197760a53090",
+      "matches_live": true
+    },
+    "web_hmi/test_periods_v2.py": {
+      "sha256": "d5a5f9f003a07f54e5541cc3d01f76911cba15c06e3a8cc4ca308a236de42f8a",
+      "matches_live": true
+    },
+    "web_hmi/test_pixhawk_owner_helper.py": {
+      "sha256": "ccef71654aed1d916013d24b2f35ff592f1f4fe4dc91342cf3ca7393ed36fe5d",
+      "matches_live": true
+    },
+    "web_hmi/test_pixhawk_telemetry.py": {
+      "sha256": "c0c0560db8f5cf0ade9c72095f68e6334d0a20511401e06cc4b1dfa876c5eff2",
+      "matches_live": true
+    },
+    "web_hmi/test_process_guard.py": {
+      "sha256": "90aa44aecff764caa734d552d9643d4c7c467bf20260fc49ea87ce1f51b4d35c",
+      "matches_live": true
+    },
+    "web_hmi/test_support.py": {
+      "sha256": "e5957b5e7f7a5c87855473e443c2c6027f5ef24c4812aff3e1fe89fcac1aa7b9",
+      "matches_live": true
+    },
+    "web_hmi/wsgi.py": {
+      "sha256": "32501583e0c32146b80ddfa13b7d2ac58276a57a8e21f07a3cafd115927b28c9",
+      "matches_live": true
+    }
+  },
+  "config_note": "Keep UGV_HMI_TELEMETRY=0 as in the running 8083 service. Live auth.env.example has stale 1; not copied.",
+  "external_logger_dependencies": "None. auth.private_file and telemetry_bridge are tracked within web_hmi; service umask 0077 is deploy/ugv1/ugv-hmi-auth.service.example."
+}
