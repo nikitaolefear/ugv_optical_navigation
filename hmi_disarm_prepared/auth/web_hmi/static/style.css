@@ -1,0 +1,42 @@
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#101827;color:#edf3ff}*{box-sizing:border-box}body{margin:0;padding:20px}main{max-width:1050px;margin:auto}h1{font-size:30px}small{font-size:18px;color:#a9bdd6}section,aside{background:#1e2c42;padding:20px;border-radius:14px;margin:16px 0}aside{border:2px solid #e7bd54}p{line-height:1.5}select,button{font:inherit;font-size:19px;min-height:60px;border-radius:9px;padding:12px;border:1px solid #7790b0}select{display:block;width:100%;margin-top:10px;background:#142034;color:white}button{background:#245bb7;color:white;cursor:pointer;touch-action:manipulation}button:disabled{opacity:.45;cursor:default}.stop{background:#b62535;border-color:#ff8c98}.buttons,.metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px}progress{width:100%;height:28px;accent-color:#58d9a8}#notice{color:#ffe194;min-height:24px}li{padding:6px}dialog{max-width:500px;border:2px solid #86b5fa;border-radius:14px;background:#1e2c42;color:white}dialog button{margin:8px}dialog::backdrop{background:#000b}:focus-visible{outline:3px solid #ffd36a;outline-offset:3px}@media(max-width:600px){body{padding:10px}section,aside{padding:16px}.metrics{grid-template-columns:1fr;gap:0}.buttons{grid-template-columns:1fr}h1{font-size:26px}}
+
+nav{padding:16px;background:#1e2c42;border-radius:12px}nav form{display:inline-block;margin-left:12px}a{color:#9ec7ff}input{font:inherit;min-height:48px;max-width:100%;padding:10px;border-radius:8px}#audit p{overflow-wrap:anywhere;border-bottom:1px solid #7790b0;padding:12px}
+/* Tablet access management: stacked controls, large touch targets, no horizontal table. */
+.access-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:16px; }
+.access-card { min-width:0; padding:16px; border:1px solid #64748b; border-radius:8px; overflow-wrap:anywhere; }
+.access-form { display:flex; flex-direction:column; gap:12px; margin:16px 0; }
+.access-form label { display:flex; flex-direction:column; gap:6px; }
+.access-form input:not([type="checkbox"]), .access-form select, .access-form button { min-height:48px; width:100%; box-sizing:border-box; font:inherit; }
+.access-form fieldset { min-width:0; }
+.access-form .permission { display:flex; flex-direction:row; align-items:center; flex-wrap:wrap; min-height:44px; padding:6px 0; }
+.access-form .permission input { width:24px; height:24px; flex-shrink:0; }
+.access-form small { overflow-wrap:anywhere; }
+.danger { border:2px solid #dc2626; }
+#access-message { position:sticky; top:0; background:#172033; padding:12px; z-index:2; }
+
+#access-message:empty { display:none; }
+
+/* Login fields share one full-width column; the reveal button never participates in sizing. */
+.login-page { width:100%; max-width:42rem; min-width:0; overflow-wrap:anywhere; }
+.login-page, .login-page *, .login-page *::before, .login-page *::after { box-sizing:border-box; }
+.login-panel { min-width:0; }
+.login-form { display:grid; grid-template-columns:minmax(0,1fr); gap:18px; width:100%; min-width:0; }
+.login-field { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; min-width:0; }
+.login-field > label { display:block; margin:0; font-weight:600; }
+.login-field > input, .login-password-wrap > input { display:block; width:100%; min-width:0; max-width:100%; height:56px; margin:0; border:1px solid #7790b0; padding:12px; background:#142034; color:#edf3ff; font:inherit; }
+.login-password-wrap { position:relative; width:100%; min-width:0; }
+.login-password-wrap > input { padding-inline-end:8.5rem; }
+.login-password-toggle { position:absolute; inset-inline-end:6px; top:50%; transform:translateY(-50%); width:7.5rem; min-height:44px; height:44px; margin:0; padding:6px; font-size:16px; line-height:1.2; white-space:nowrap; }
+.login-form #password-policy { min-width:0; margin:0; overflow-wrap:anywhere; }
+.login-submit { width:100%; min-width:0; }
+.login-field input:focus-visible { outline-offset:-3px; }
+
+/* Physical DISARM is separate from DEMO and sized for tablet touch. */
+.pixhawk-disarm {margin:20px 0;padding:16px;border:3px solid #b42318;border-radius:12px;}
+#pixhawk-disarm {min-height:72px;min-width:280px;width:100%;padding:18px 24px;
+  background:#a51222;color:#fff;font-size:1.4rem;font-weight:800;border:3px solid #fff;
+  border-radius:12px;touch-action:manipulation;}
+#pixhawk-disarm:focus-visible {outline:4px solid #ffbf47;outline-offset:4px;}
+#pixhawk-disarm:disabled {background:#66444a;color:#fff;cursor:not-allowed;}
+#disarm-notice {font-size:1.1rem;line-height:1.5;overflow-wrap:anywhere;}
+@media(max-width:480px){#pixhawk-disarm{min-width:0;font-size:1.15rem;}}

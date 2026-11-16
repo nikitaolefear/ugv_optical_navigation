@@ -1,0 +1,4 @@
+<nav aria-label="Обліковий запис"><span>Користувач: <strong>{{ user.username }}</strong> · роль: <strong>{{ user.role }}</strong></span> · {% if can('status.view') %}<a href="/">HMI</a>{% endif %} · {% if can('audit.view') %}<a href="/audit">Журнал подій</a>{% endif %}
+{% if can('statistics.view') %}<a href="/statistics">Статистика місій</a>{% endif %}
+{% if can('users.manage') or can('roles.manage') %}<a href="/access">Керування доступом</a>{% endif %}
+<form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button type="submit">Вийти</button></form></nav>

@@ -1,0 +1,486 @@
+{
+  "base_commit": "f4462926b40dc888a77b18e6fbce105dd0a776a5",
+  "profile": "DISARMED_OBSERVED",
+  "files": [
+    {
+      "file": "AUDIT.md",
+      "sha256": "50d683fc1ea5e965893a0aceb4317af86d2347a858455e7ccc8dd4bae15dd65e",
+      "status": "NEW"
+    },
+    {
+      "file": "COMMIT_FILES.txt",
+      "sha256": "b1550912f8a1d9f1f5fe92825eb7968e8fcf235518a4f6cc3e2b6d453c685092",
+      "status": "NEW"
+    },
+    {
+      "file": "DEPLOYMENT.md",
+      "sha256": "81c0ffc6708d7330e59437924511b0ee55f070be6fa5cd508ec245d01534caf6",
+      "status": "NEW"
+    },
+    {
+      "file": "ISOLATION_VALIDATION.md",
+      "status": "NEW",
+      "sha256": "6133ee74101bde22d276cb5e8be8ba29787946bcc4a7a1efd0914b39254f54e1"
+    },
+    {
+      "file": "OBSERVED_VALIDATION.md",
+      "status": "NEW",
+      "sha256": "0bb28a687fbf70e6170da4b71158fa781f684d1a17bc12f8e84d8f1cb273bad8"
+    },
+    {
+      "file": "README.md",
+      "sha256": "0d8640345ad211307f00da10ffcc510a8c724671407a31e36899d8574263f4c2",
+      "status": "NEW"
+    },
+    {
+      "file": "TECHNICAL_DECISION.md",
+      "status": "NEW",
+      "sha256": "bf1af78e03c5b10bbbda068fd30671b7641ba16e48a4eb473f172377a9f61dbf"
+    },
+    {
+      "file": "auth/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "NEW"
+    },
+    {
+      "file": "auth/web_hmi/__init__.py",
+      "sha256": "739fea1603f7118b1e04d05ea1d686fcf72cd92e0cb57928023c480f95543533",
+      "status": "NEW"
+    },
+    {
+      "file": "auth/web_hmi/access_control.py",
+      "sha256": "f81f18d3fc8ad9ffb3159f86a1b7113ad98d42e746e36893bb37e9e9c1d9e830",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/access_control.py",
+      "baseline_sha256": "7e3d8e5fc41db41b45d58866b42bee49d584e19421e0b76e602ff3f398b55005"
+    },
+    {
+      "file": "auth/web_hmi/access_migration.py",
+      "sha256": "26533c1643f80c79de52bc9259c54276167054e2db63b2324a99713525c298ce",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/access_migration.py",
+      "baseline_sha256": "26533c1643f80c79de52bc9259c54276167054e2db63b2324a99713525c298ce"
+    },
+    {
+      "file": "auth/web_hmi/admin_cli.py",
+      "sha256": "2cd339ee2ab4a14db8e81457d286e3f11015b01990b82e9b48c486e24f0dd435",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/admin_cli.py",
+      "baseline_sha256": "2cd339ee2ab4a14db8e81457d286e3f11015b01990b82e9b48c486e24f0dd435"
+    },
+    {
+      "file": "auth/web_hmi/app.py",
+      "sha256": "0f52b9b96e3423e3af63f4886a7acb37271e6d8a16ce7302bf24887e1290a324",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/app.py",
+      "baseline_sha256": "6cf7fb6854f3284182a645831cad0a3a18429aa5f47313a103283db8aeafee09"
+    },
+    {
+      "file": "auth/web_hmi/auth.py",
+      "sha256": "d2c9025d221127723d1a51cb5fab1740ef2d305c91fb811bbcc65932766b279e",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/auth.py",
+      "baseline_sha256": "d2c9025d221127723d1a51cb5fab1740ef2d305c91fb811bbcc65932766b279e"
+    },
+    {
+      "file": "auth/web_hmi/gunicorn_conf.py",
+      "sha256": "5c6242662b63c6b982248f2e1d4d0a438a76a8c0b7bf970002c798bcd461db52",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/gunicorn_conf.py",
+      "baseline_sha256": "e6288cd855d22edcf1f75cbff9880a16f851c101f90dd9d8a7a894aa10aed3b0"
+    },
+    {
+      "file": "auth/web_hmi/mission_statistics.py",
+      "sha256": "8b37baab684e3d6491a65a1b34eb44e03eedaa11c15f640ebe28063257fc4816",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/mission_statistics.py",
+      "baseline_sha256": "8b37baab684e3d6491a65a1b34eb44e03eedaa11c15f640ebe28063257fc4816"
+    },
+    {
+      "file": "auth/web_hmi/pixhawk_owner_client.py",
+      "sha256": "43e7b73d15aa2c6883f39c4df491e2e235ab986656d9b840c68b62e0dc95f07f",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/pixhawk_owner_client.py",
+      "baseline_sha256": "43e7b73d15aa2c6883f39c4df491e2e235ab986656d9b840c68b62e0dc95f07f"
+    },
+    {
+      "file": "auth/web_hmi/pixhawk_telemetry.py",
+      "sha256": "27843c049f344133637923733b6658c64b82abdad75a22afa001be8876ab5a18",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/pixhawk_telemetry.py",
+      "baseline_sha256": "27843c049f344133637923733b6658c64b82abdad75a22afa001be8876ab5a18"
+    },
+    {
+      "file": "auth/web_hmi/runtime.py",
+      "sha256": "3763597e54cafec6575f1540565b5db547bf235d6667987bb67ae24e49b8022e",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/runtime.py",
+      "baseline_sha256": "9fb259c4ed1783544f0aa6016d5a646aeb5dd988b15228362bc145c6f8c98394"
+    },
+    {
+      "file": "auth/web_hmi/simulator.py",
+      "sha256": "4da3533df9973359f77a203969f11b443951aaa5c66a789f0f81b39d9734b0cd",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/simulator.py",
+      "baseline_sha256": "4da3533df9973359f77a203969f11b443951aaa5c66a789f0f81b39d9734b0cd"
+    },
+    {
+      "file": "auth/web_hmi/static/access.js",
+      "sha256": "778d32af5b6a202d4439816eeccc5bf12952279357f174866c090da59ca84c0f",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/static/access.js",
+      "baseline_sha256": "778d32af5b6a202d4439816eeccc5bf12952279357f174866c090da59ca84c0f"
+    },
+    {
+      "file": "auth/web_hmi/static/account.js",
+      "sha256": "b9fd6524135d72f6bc8e947541fb1d1daf1e4995d5ab6d50e778eca1158da9bc",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/static/account.js",
+      "baseline_sha256": "b9fd6524135d72f6bc8e947541fb1d1daf1e4995d5ab6d50e778eca1158da9bc"
+    },
+    {
+      "file": "auth/web_hmi/static/app.js",
+      "sha256": "640c85a841cb97a24d138cca7f5a11b42c26175e204bac13afa464f55aea14bf",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/static/app.js",
+      "baseline_sha256": "640c85a841cb97a24d138cca7f5a11b42c26175e204bac13afa464f55aea14bf"
+    },
+    {
+      "file": "auth/web_hmi/static/audit.js",
+      "sha256": "d6a4bfe6dc3aa97dbec4e16b105acc42291c2dc85fb84712f3ef4c1ed5c0a7bc",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/static/audit.js",
+      "baseline_sha256": "d6a4bfe6dc3aa97dbec4e16b105acc42291c2dc85fb84712f3ef4c1ed5c0a7bc"
+    },
+    {
+      "file": "auth/web_hmi/static/disarm.js",
+      "sha256": "a2612aed14c72e407a7175ac77214329b23f751c79d2ebd482481f6adf965497",
+      "status": "NEW"
+    },
+    {
+      "file": "auth/web_hmi/static/statistics.js",
+      "sha256": "9b66508bf97e7bedce0f4ee576f168d822bff62c8889a87ef1a133f9493de536",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/static/statistics.js",
+      "baseline_sha256": "9b66508bf97e7bedce0f4ee576f168d822bff62c8889a87ef1a133f9493de536"
+    },
+    {
+      "file": "auth/web_hmi/static/style.css",
+      "sha256": "0645c705f94bba8d0c5b33fa9a6e7d04f164e7954171d16495aecb649861c3a9",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/static/style.css",
+      "baseline_sha256": "ff77a72a4a7483d68802b1c9a20f80e2d5a9dd4691e37196e33faf3a09584a69"
+    },
+    {
+      "file": "auth/web_hmi/technical_telemetry_log.py",
+      "sha256": "ec4297bce3d947c6715f9ceb678a67e6be13f8726d61537a270b9c4127baefa2",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/technical_telemetry_log.py",
+      "baseline_sha256": "ec4297bce3d947c6715f9ceb678a67e6be13f8726d61537a270b9c4127baefa2"
+    },
+    {
+      "file": "auth/web_hmi/telemetry_bridge.py",
+      "sha256": "f5d41bfeabbc9d6be3b02f28ef12a1b528249c474c172c68b0efcba5b520fa4a",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/telemetry_bridge.py",
+      "baseline_sha256": "f5d41bfeabbc9d6be3b02f28ef12a1b528249c474c172c68b0efcba5b520fa4a"
+    },
+    {
+      "file": "auth/web_hmi/templates/access.html",
+      "sha256": "c95e5725a85f7889b8aaad6452e973ccf2752f69e10775d14fb445d03519d20f",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/templates/access.html",
+      "baseline_sha256": "c95e5725a85f7889b8aaad6452e973ccf2752f69e10775d14fb445d03519d20f"
+    },
+    {
+      "file": "auth/web_hmi/templates/account.html",
+      "sha256": "5cdda86de3589342e5ab3df7fbf79dc6ad15b269ff798d4b3f09028302c71880",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/templates/account.html",
+      "baseline_sha256": "5cdda86de3589342e5ab3df7fbf79dc6ad15b269ff798d4b3f09028302c71880"
+    },
+    {
+      "file": "auth/web_hmi/templates/audit.html",
+      "sha256": "ff6478d027ce07a6cb3bebfb4a1568dc2a3206df20c04178c73e9f7497e9a1d3",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/templates/audit.html",
+      "baseline_sha256": "ff6478d027ce07a6cb3bebfb4a1568dc2a3206df20c04178c73e9f7497e9a1d3"
+    },
+    {
+      "file": "auth/web_hmi/templates/error.html",
+      "sha256": "93c01cbf7c209271b4b3d22adbe5f2bec74a0442ebbb9d8dbad9a82db4bfdc75",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/templates/error.html",
+      "baseline_sha256": "93c01cbf7c209271b4b3d22adbe5f2bec74a0442ebbb9d8dbad9a82db4bfdc75"
+    },
+    {
+      "file": "auth/web_hmi/templates/index.html",
+      "sha256": "ccb32808e312fc661c3f624de048a4157f613c8e07ac0d759bd508f9714e1ece",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/templates/index.html",
+      "baseline_sha256": "df5585714d77ca25bf6c7be41bf1a1504903a989e8c01c380c589d2758c3dddb"
+    },
+    {
+      "file": "auth/web_hmi/templates/login.html",
+      "sha256": "342ceddbf17695aa3a4ceee7f1f757699ed587adb644ab3b33cd1c3e882f94df",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/templates/login.html",
+      "baseline_sha256": "342ceddbf17695aa3a4ceee7f1f757699ed587adb644ab3b33cd1c3e882f94df"
+    },
+    {
+      "file": "auth/web_hmi/templates/profile.html",
+      "sha256": "a8cb9cefb23f96e1be06b9c8fb30a1a6f162948cd6369314ab66d41881e530c1",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/templates/profile.html",
+      "baseline_sha256": "a8cb9cefb23f96e1be06b9c8fb30a1a6f162948cd6369314ab66d41881e530c1"
+    },
+    {
+      "file": "auth/web_hmi/templates/statistics.html",
+      "sha256": "e90f1240f166e6c3d0c74104a7cb22327b91b915e57b5f7cbddf01c300334840",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/templates/statistics.html",
+      "baseline_sha256": "e90f1240f166e6c3d0c74104a7cb22327b91b915e57b5f7cbddf01c300334840"
+    },
+    {
+      "file": "auth/web_hmi/test_access.py",
+      "sha256": "1e97adf0a8258e3da00e1ee5c2e8731fa28b6921fa885d348a1f5b8fb57683ac",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/test_access.py",
+      "baseline_sha256": "1e97adf0a8258e3da00e1ee5c2e8731fa28b6921fa885d348a1f5b8fb57683ac"
+    },
+    {
+      "file": "auth/web_hmi/test_auth.py",
+      "sha256": "6be9bf43c5b03a1ced8b6d7bb5e4a9d32c3729f81ee4e6cac3eae13b438f6d55",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/test_auth.py",
+      "baseline_sha256": "6be9bf43c5b03a1ced8b6d7bb5e4a9d32c3729f81ee4e6cac3eae13b438f6d55"
+    },
+    {
+      "file": "auth/web_hmi/test_hmi.py",
+      "sha256": "1fdd526015219db71e99ea6abff9244261ccfcdd278fa24bd0981e4a668b6157",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/test_hmi.py",
+      "baseline_sha256": "1fdd526015219db71e99ea6abff9244261ccfcdd278fa24bd0981e4a668b6157"
+    },
+    {
+      "file": "auth/web_hmi/test_support.py",
+      "sha256": "e5957b5e7f7a5c87855473e443c2c6027f5ef24c4812aff3e1fe89fcac1aa7b9",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/test_support.py",
+      "baseline_sha256": "e5957b5e7f7a5c87855473e443c2c6027f5ef24c4812aff3e1fe89fcac1aa7b9"
+    },
+    {
+      "file": "auth/web_hmi/wsgi.py",
+      "sha256": "32501583e0c32146b80ddfa13b7d2ac58276a57a8e21f07a3cafd115927b28c9",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv-hmi-auth-password8-release/web_hmi/wsgi.py",
+      "baseline_sha256": "32501583e0c32146b80ddfa13b7d2ac58276a57a8e21f07a3cafd115927b28c9"
+    },
+    {
+      "file": "deploy/README.md",
+      "status": "NEW",
+      "sha256": "e3e4538bd07a57c731de83019fda8278382e655d10d6f2f27c56acb95dd9d623"
+    },
+    {
+      "file": "deploy/identities.env.example",
+      "status": "NEW",
+      "sha256": "0e202b50b8d948294fbce2d83003ee95f1eb16582234ed2ab02f3317073e20b0"
+    },
+    {
+      "file": "deploy/ugv-command-gateway.service.example",
+      "status": "NEW",
+      "sha256": "7869cb67cf663807d795bc1990c47c41e1e40ffb95edbdbd095b9db5d39d5757"
+    },
+    {
+      "file": "disarm_control/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "NEW"
+    },
+    {
+      "file": "disarm_control/engine.py",
+      "sha256": "375acd1b2bb11d5c20431753b20d7757a521f382d3c79214264d9e8aec90ad4b",
+      "status": "NEW"
+    },
+    {
+      "file": "disarm_control/gateway.py",
+      "status": "NEW",
+      "sha256": "6a9c3ec4316c20a5dede693e595fc5e8b1706dd48186d630eec0b52d9b44f95f"
+    },
+    {
+      "file": "disarm_control/inhibit.py",
+      "status": "NEW",
+      "sha256": "5b2035dce6a1df69c7c9ae4505ba9179b7cc66f39aa00b74b772979f51a25cd3"
+    },
+    {
+      "file": "disarm_control/ipc.py",
+      "sha256": "728901bfb25b1eb9dd55cc8da31775db19e63f734200cfd20a71b1b2ec8774b3",
+      "status": "NEW"
+    },
+    {
+      "file": "owner/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "NEW"
+    },
+    {
+      "file": "owner/stop_latch_test/__init__.py",
+      "sha256": "739fea1603f7118b1e04d05ea1d686fcf72cd92e0cb57928023c480f95543533",
+      "status": "NEW"
+    },
+    {
+      "file": "owner/stop_latch_test/hold.html",
+      "sha256": "01dd0e71e34b2ef292886b145b2f253274649f886f313cdee3d40bda5ebb4336",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/stop_latch_test/hold.html",
+      "baseline_sha256": "01dd0e71e34b2ef292886b145b2f253274649f886f313cdee3d40bda5ebb4336"
+    },
+    {
+      "file": "owner/stop_latch_test/hold.js",
+      "sha256": "9dae77ecf3d647bca77d2b45e3eb6dffc8017bb0bb8420a8a3dfb58a5272eeac",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/stop_latch_test/hold.js",
+      "baseline_sha256": "9dae77ecf3d647bca77d2b45e3eb6dffc8017bb0bb8420a8a3dfb58a5272eeac"
+    },
+    {
+      "file": "owner/stop_latch_test/hold_bench.py",
+      "sha256": "13a7574bae870dd2443aa6928ee4d80c4466135b644f340826ff508fa7e89e41",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/stop_latch_test/hold_bench.py",
+      "baseline_sha256": "7252b6691663878adc12cfdce4e67c057f3c09f6cb94ae83aa5f4b78c4c80cf3"
+    },
+    {
+      "file": "owner/stop_latch_test/hold_runner.py",
+      "sha256": "2918dcb67163127478634576b988e31637159d47c6899d08fb73b9cc30d6ec45",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/stop_latch_test/hold_runner.py",
+      "baseline_sha256": "cd02b0f0797364924cb0e6335c4468282615f0381bc167b9cbf338d383318dfe"
+    },
+    {
+      "file": "owner/stop_latch_test/server.py",
+      "sha256": "528278064c3b61b3487c2795aaa89323dea6ae00548749c9aba0f7be522b3774",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/stop_latch_test/server.py",
+      "baseline_sha256": "72626030219fda2ec0765f88586e18da4c75df4d7a2cb5ae9cdb3a4092456543"
+    },
+    {
+      "file": "owner/stop_latch_test/stop_latch.py",
+      "sha256": "68771f586e12087c4b879728d2a16511cda1b6a4e2821c2c5bc2f158b7809df0",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/stop_latch_test/stop_latch.py",
+      "baseline_sha256": "68771f586e12087c4b879728d2a16511cda1b6a4e2821c2c5bc2f158b7809df0"
+    },
+    {
+      "file": "owner/web_hmi/__init__.py",
+      "sha256": "739fea1603f7118b1e04d05ea1d686fcf72cd92e0cb57928023c480f95543533",
+      "status": "NEW"
+    },
+    {
+      "file": "owner/web_hmi/app.py",
+      "sha256": "6100e815fdab28064762c5c3e7355fe43f1fc7c4002fe06616d3e1368cfb59b3",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/web_hmi/app.py",
+      "baseline_sha256": "6100e815fdab28064762c5c3e7355fe43f1fc7c4002fe06616d3e1368cfb59b3"
+    },
+    {
+      "file": "owner/web_hmi/pixhawk_owner_client.py",
+      "sha256": "300196ce5b7181e61a70f9b68b157d4f4edc44fe894c519d3a419a4ad60243bd",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/web_hmi/pixhawk_owner_client.py",
+      "baseline_sha256": "300196ce5b7181e61a70f9b68b157d4f4edc44fe894c519d3a419a4ad60243bd"
+    },
+    {
+      "file": "owner/web_hmi/pixhawk_telemetry.py",
+      "sha256": "0c53bba2ffd3298edf7a3f3e8e6121e164707ac67d86d343d082d9a9d79a6845",
+      "status": "MODIFIED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/web_hmi/pixhawk_telemetry.py",
+      "baseline_sha256": "868d4fd2d3ae0c0b080256f445966854bbd418bdb01444a6805831bffc680839"
+    },
+    {
+      "file": "owner/web_hmi/simulator.py",
+      "sha256": "43d0e945db1456b500ab8c0b59fad4731876b071e40ea221246dc8fb94464fda",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/web_hmi/simulator.py",
+      "baseline_sha256": "43d0e945db1456b500ab8c0b59fad4731876b071e40ea221246dc8fb94464fda"
+    },
+    {
+      "file": "owner/web_hmi/static/app.js",
+      "sha256": "df0f6239c16d9b320ee4f7adf1f31e7b74216d91e23735dd743aa607c85004a5",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/web_hmi/static/app.js",
+      "baseline_sha256": "df0f6239c16d9b320ee4f7adf1f31e7b74216d91e23735dd743aa607c85004a5"
+    },
+    {
+      "file": "owner/web_hmi/static/style.css",
+      "sha256": "cfeb949d7368fc191036d90a999eb6b603f30885c92d9ccce12a8b6920eaf9cf",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/web_hmi/static/style.css",
+      "baseline_sha256": "cfeb949d7368fc191036d90a999eb6b603f30885c92d9ccce12a8b6920eaf9cf"
+    },
+    {
+      "file": "owner/web_hmi/templates/index.html",
+      "sha256": "ea32b8d41538453f5af110e80d6490bb16cfc56b63048c8cb5fd517e45536bcf",
+      "status": "UNCHANGED_BASELINE",
+      "source": "/home/ugvs2/ugv_optical_navigation/web_hmi/templates/index.html",
+      "baseline_sha256": "ea32b8d41538453f5af110e80d6490bb16cfc56b63048c8cb5fd517e45536bcf"
+    },
+    {
+      "file": "run_checks.py",
+      "sha256": "36da20a2a5893ed4ee7b409722c58748fd3d04d00811d2f604afab9effc11a6b",
+      "status": "NEW"
+    },
+    {
+      "file": "tests/browser_check.py",
+      "sha256": "59f254f213e8f5408335c87234fab11a4f1a010a0e5c9d1e0bf42f29019e6a66",
+      "status": "NEW"
+    },
+    {
+      "file": "tests/test_deploy_profile.py",
+      "status": "NEW",
+      "sha256": "06e685bb558d79a25ccc7bd9c6a68fb48c84f7f2b504063d790a06a42ba168c0"
+    },
+    {
+      "file": "tests/test_e2e.py",
+      "sha256": "7d6866e2d03f3977c13ff7e4f1e1cf76789c30f84d44d07477176d27aea51c3e",
+      "status": "NEW"
+    },
+    {
+      "file": "tests/test_engine.py",
+      "sha256": "2263592576dad0c1cd5df5c7f9ea473d2a8f02400dee9291a5f03a830e80ea13",
+      "status": "NEW"
+    },
+    {
+      "file": "tests/test_gateway.py",
+      "status": "NEW",
+      "sha256": "2f4e4990f714f5dad71d143a0c33894c35f05d9762d67e70a878308e98de11b3"
+    },
+    {
+      "file": "tests/test_inhibit.py",
+      "status": "NEW",
+      "sha256": "e3d34653a7ea6e0c924dc9c23d1e3e2d0e69962d4e48106d3fd31fc3938e6862"
+    },
+    {
+      "file": "tests/test_ipc.py",
+      "sha256": "bd96ed2271e52e17d60a9681f00a11399681965f9b5b3fcadc90dd8bfd8b54ef",
+      "status": "NEW"
+    },
+    {
+      "file": "tests/test_legacy_readonly.py",
+      "status": "NEW",
+      "sha256": "e400038b97754b5125412b4bf01bca2f86da3ffe377bed58bccbacba2f6bd735"
+    },
+    {
+      "file": "tests/test_owner.py",
+      "sha256": "e428fa0d7927786ace3dcc411709ab675adcc33032b74d176c2ede366c9bf3e9",
+      "status": "NEW"
+    },
+    {
+      "file": "tests/test_owner_config.py",
+      "status": "NEW",
+      "sha256": "5b17d1174c7221775420eb093ad3cfb075a85fff1d1bb1b13824bba9a026af04"
+    },
+    {
+      "file": "tests/test_web.py",
+      "sha256": "347a6abb38b0cc3dcfe22052ae3c1becf483e770c84a1e6ee72a898012cd34ac",
+      "status": "NEW"
+    }
+  ]
+}

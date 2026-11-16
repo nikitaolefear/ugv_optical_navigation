@@ -1,0 +1,36 @@
+# REVIEW TEMPLATE ONLY. Not installed or started. No --enable-disarm by default.
+[Unit]
+Description=UGV hardware-less DISARM gateway (prepared)
+After=ugv-hmi.service
+
+[Service]
+Type=simple
+User=ugv-command
+Group=ugv-rpc-frontend
+SupplementaryGroups=ugv-rpc-owner
+WorkingDirectory=/opt/ugv-disarm
+Environment=PYTHONPATH=/opt/ugv-disarm
+EnvironmentFile=/etc/ugv-disarm/identities.env
+ExecStart=/opt/ugv-disarm/venv/bin/python -m disarm_control.gateway --socket /run/ugv-command/ingress.sock --frontend-uid ${UGV_FRONTEND_UID} --ingress-gid ${UGV_FRONTEND_RPC_GID} --backend-socket /run/ugv-pixhawk-control/backend.sock --owner-uid ${UGV_OWNER_UID} --backend-gid ${UGV_OWNER_RPC_GID} --inhibit-file /run/ugv-disarm-policy/inhibit
+RuntimeDirectory=ugv-command
+RuntimeDirectoryMode=0710
+UMask=0077
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX
+RestrictSUIDSGID=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+StandardOutput=journal
+StandardError=journal
+Restart=no
+
+# Enable only after approved provisioning/tests: reviewed override of ExecStart
+# with --enable-disarm, plus explicit frontend/owner configuration. Never add
+# device groups, sudo, a TCP listener or an inherited serial FD to this service.
