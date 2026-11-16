@@ -1,0 +1,5 @@
+# Deployment proposal only. Nothing installed during this change.
+Flask>=3.1,<4
+Werkzeug>=3.1,<4
+gunicorn>=26.2.2,<28
+pymavlink
