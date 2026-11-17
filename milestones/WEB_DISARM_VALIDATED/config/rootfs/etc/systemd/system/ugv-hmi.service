@@ -1,0 +1,18 @@
+[Unit]
+Description=UGV sole Pixhawk owner, legacy read-only, DISARM inhibited
+After=network.target systemd-tmpfiles-setup.service
+[Service]
+Type=simple
+User=ugvs2
+Group=ugvs2
+SupplementaryGroups=ugv-rpc-owner
+WorkingDirectory=/opt/ugv-disarm/package/owner
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONPATH=/opt/ugv-disarm/package/owner:/opt/ugv-disarm/package
+EnvironmentFile=/etc/ugv-disarm/identities.env
+ExecStart=/opt/ugv-disarm/venv-owner/bin/python -u -m stop_latch_test.hold_runner --journal /home/ugvs2/.local/state/ugv-hmi/hold-bench.jsonl --web-disarm-socket /run/ugv-pixhawk-control/backend.sock --web-disarm-db /var/lib/ugv-pixhawk/disarm.sqlite3 --web-disarm-client-uid ${UGV_GATEWAY_UID} --web-disarm-client-gid ${UGV_OWNER_RPC_GID} --inhibit-file /run/ugv-disarm-policy/inhibit
+Restart=no
+TimeoutStopSec=15
+UMask=0077
+[Install]
+WantedBy=multi-user.target

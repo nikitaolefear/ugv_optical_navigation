@@ -1,0 +1,6 @@
+<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UGV №1 HOLD bench</title><script src="/app.js" defer></script></head><body>
+<h1>UGV №1 · GPIO17 → STOP_LATCH → HOLD</h1><p>Стендовий тест DISARMED. Одне ввімкнення — одне натискання — максимум один запит HOLD.</p>
+<p id="connection">Очікування</p><p>Контакт: <strong id="contact">UNKNOWN</strong></p><p>STOP_LATCH: <strong id="latch">UNKNOWN</strong></p><p>Стан: <strong id="run">UNKNOWN</strong></p><p id="probe"></p>
+<button data-action="reset">RESET програмного блокування</button> <button data-action="arm_hold_once">Увімкнути HOLD на одне натискання</button><p id="result" role="status"></p>
+<p>Підтвердження: HOLD_CONFIRMED лише за новим HEARTBEAT HOLD + DISARMED від того самого автопілота після запиту. HOLD_SENT ще не є підтвердженням. При SKIPPED, FAILED або TIMEOUT блокування залишається. RESET не змінює режим Pixhawk.</p>
+<h2>Постійний журнал</h2><p>Час UTC. Натискання, відправлення, підтвердження/тайм-аут і відпускання записуються без відкритої сторінки. Останні 500 записів доступні після повернення; повний JSONL залишається на Pi.</p><pre id="events"></pre></body></html>

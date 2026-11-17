@@ -1,0 +1,1298 @@
+[
+  {
+    "source": "/opt/ugv-disarm/package/AUDIT.md",
+    "snapshot": "installed/frontend_gateway/AUDIT.md",
+    "sha256": "50d683fc1ea5e965893a0aceb4317af86d2347a858455e7ccc8dd4bae15dd65e",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/COMMIT_FILES.txt",
+    "snapshot": "installed/frontend_gateway/COMMIT_FILES.txt",
+    "sha256": "b1550912f8a1d9f1f5fe92825eb7968e8fcf235518a4f6cc3e2b6d453c685092",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/DEPLOYMENT.md",
+    "snapshot": "installed/frontend_gateway/DEPLOYMENT.md",
+    "sha256": "81c0ffc6708d7330e59437924511b0ee55f070be6fa5cd508ec245d01534caf6",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/ISOLATION_VALIDATION.md",
+    "snapshot": "installed/frontend_gateway/ISOLATION_VALIDATION.md",
+    "sha256": "6133ee74101bde22d276cb5e8be8ba29787946bcc4a7a1efd0914b39254f54e1",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/OBSERVED_VALIDATION.md",
+    "snapshot": "installed/frontend_gateway/OBSERVED_VALIDATION.md",
+    "sha256": "0bb28a687fbf70e6170da4b71158fa781f684d1a17bc12f8e84d8f1cb273bad8",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/README.md",
+    "snapshot": "installed/frontend_gateway/README.md",
+    "sha256": "0d8640345ad211307f00da10ffcc510a8c724671407a31e36899d8574263f4c2",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/SOURCE_MANIFEST.json",
+    "snapshot": "installed/frontend_gateway/SOURCE_MANIFEST.json",
+    "sha256": "61d6566172d2c7d9ce7d95d1897e39092a772e94cec6b0ce4ea09cc793a102d1",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/TECHNICAL_DECISION.md",
+    "snapshot": "installed/frontend_gateway/TECHNICAL_DECISION.md",
+    "sha256": "bf1af78e03c5b10bbbda068fd30671b7641ba16e48a4eb473f172377a9f61dbf",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/__init__.py",
+    "snapshot": "installed/frontend_gateway/auth/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/__init__.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/__init__.py",
+    "sha256": "739fea1603f7118b1e04d05ea1d686fcf72cd92e0cb57928023c480f95543533",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/access_control.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/access_control.py",
+    "sha256": "f81f18d3fc8ad9ffb3159f86a1b7113ad98d42e746e36893bb37e9e9c1d9e830",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/access_migration.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/access_migration.py",
+    "sha256": "26533c1643f80c79de52bc9259c54276167054e2db63b2324a99713525c298ce",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/admin_cli.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/admin_cli.py",
+    "sha256": "2cd339ee2ab4a14db8e81457d286e3f11015b01990b82e9b48c486e24f0dd435",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/app.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/app.py",
+    "sha256": "0f52b9b96e3423e3af63f4886a7acb37271e6d8a16ce7302bf24887e1290a324",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/auth.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/auth.py",
+    "sha256": "d2c9025d221127723d1a51cb5fab1740ef2d305c91fb811bbcc65932766b279e",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/gunicorn_conf.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/gunicorn_conf.py",
+    "sha256": "5c6242662b63c6b982248f2e1d4d0a438a76a8c0b7bf970002c798bcd461db52",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/mission_statistics.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/mission_statistics.py",
+    "sha256": "8b37baab684e3d6491a65a1b34eb44e03eedaa11c15f640ebe28063257fc4816",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/pixhawk_owner_client.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/pixhawk_owner_client.py",
+    "sha256": "43e7b73d15aa2c6883f39c4df491e2e235ab986656d9b840c68b62e0dc95f07f",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/pixhawk_telemetry.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/pixhawk_telemetry.py",
+    "sha256": "27843c049f344133637923733b6658c64b82abdad75a22afa001be8876ab5a18",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/runtime.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/runtime.py",
+    "sha256": "3763597e54cafec6575f1540565b5db547bf235d6667987bb67ae24e49b8022e",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/simulator.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/simulator.py",
+    "sha256": "4da3533df9973359f77a203969f11b443951aaa5c66a789f0f81b39d9734b0cd",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/static/access.js",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/static/access.js",
+    "sha256": "778d32af5b6a202d4439816eeccc5bf12952279357f174866c090da59ca84c0f",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/static/account.js",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/static/account.js",
+    "sha256": "b9fd6524135d72f6bc8e947541fb1d1daf1e4995d5ab6d50e778eca1158da9bc",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/static/app.js",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/static/app.js",
+    "sha256": "640c85a841cb97a24d138cca7f5a11b42c26175e204bac13afa464f55aea14bf",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/static/audit.js",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/static/audit.js",
+    "sha256": "d6a4bfe6dc3aa97dbec4e16b105acc42291c2dc85fb84712f3ef4c1ed5c0a7bc",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/static/disarm.js",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/static/disarm.js",
+    "sha256": "1480f63393e9a5c26d7a3a11e9e2a2f5348387ca760d04bf057105c7b4ce531c",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/static/statistics.js",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/static/statistics.js",
+    "sha256": "9b66508bf97e7bedce0f4ee576f168d822bff62c8889a87ef1a133f9493de536",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/static/style.css",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/static/style.css",
+    "sha256": "c78c6643aeb12550dba3003d7a261882eaa37477701b02526a3eff54b00d75d2",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/technical_telemetry_log.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/technical_telemetry_log.py",
+    "sha256": "ec4297bce3d947c6715f9ceb678a67e6be13f8726d61537a270b9c4127baefa2",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/telemetry_bridge.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/telemetry_bridge.py",
+    "sha256": "f5d41bfeabbc9d6be3b02f28ef12a1b528249c474c172c68b0efcba5b520fa4a",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/templates/access.html",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/templates/access.html",
+    "sha256": "c95e5725a85f7889b8aaad6452e973ccf2752f69e10775d14fb445d03519d20f",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/templates/account.html",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/templates/account.html",
+    "sha256": "5cdda86de3589342e5ab3df7fbf79dc6ad15b269ff798d4b3f09028302c71880",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/templates/audit.html",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/templates/audit.html",
+    "sha256": "ff6478d027ce07a6cb3bebfb4a1568dc2a3206df20c04178c73e9f7497e9a1d3",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/templates/error.html",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/templates/error.html",
+    "sha256": "93c01cbf7c209271b4b3d22adbe5f2bec74a0442ebbb9d8dbad9a82db4bfdc75",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/templates/index.html",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/templates/index.html",
+    "sha256": "80b6d0cb01b5edb2141ed51400d0ce8e424e82bd26e0e2ece375060f85c82574",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/templates/login.html",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/templates/login.html",
+    "sha256": "342ceddbf17695aa3a4ceee7f1f757699ed587adb644ab3b33cd1c3e882f94df",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/templates/profile.html",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/templates/profile.html",
+    "sha256": "a8cb9cefb23f96e1be06b9c8fb30a1a6f162948cd6369314ab66d41881e530c1",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/templates/statistics.html",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/templates/statistics.html",
+    "sha256": "e90f1240f166e6c3d0c74104a7cb22327b91b915e57b5f7cbddf01c300334840",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/test_access.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/test_access.py",
+    "sha256": "1e97adf0a8258e3da00e1ee5c2e8731fa28b6921fa885d348a1f5b8fb57683ac",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/test_auth.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/test_auth.py",
+    "sha256": "6be9bf43c5b03a1ced8b6d7bb5e4a9d32c3729f81ee4e6cac3eae13b438f6d55",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/test_hmi.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/test_hmi.py",
+    "sha256": "1fdd526015219db71e99ea6abff9244261ccfcdd278fa24bd0981e4a668b6157",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/test_support.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/test_support.py",
+    "sha256": "e5957b5e7f7a5c87855473e443c2c6027f5ef24c4812aff3e1fe89fcac1aa7b9",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/auth/web_hmi/wsgi.py",
+    "snapshot": "installed/frontend_gateway/auth/web_hmi/wsgi.py",
+    "sha256": "32501583e0c32146b80ddfa13b7d2ac58276a57a8e21f07a3cafd115927b28c9",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/deploy/README.md",
+    "snapshot": "installed/frontend_gateway/deploy/README.md",
+    "sha256": "e3e4538bd07a57c731de83019fda8278382e655d10d6f2f27c56acb95dd9d623",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/deploy/identities.env.example",
+    "snapshot": "installed/frontend_gateway/deploy/identities.env.example",
+    "sha256": "0e202b50b8d948294fbce2d83003ee95f1eb16582234ed2ab02f3317073e20b0",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/deploy/ugv-command-gateway.service.example",
+    "snapshot": "installed/frontend_gateway/deploy/ugv-command-gateway.service.example",
+    "sha256": "7869cb67cf663807d795bc1990c47c41e1e40ffb95edbdbd095b9db5d39d5757",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/disarm_control/__init__.py",
+    "snapshot": "installed/frontend_gateway/disarm_control/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/disarm_control/engine.py",
+    "snapshot": "installed/frontend_gateway/disarm_control/engine.py",
+    "sha256": "375acd1b2bb11d5c20431753b20d7757a521f382d3c79214264d9e8aec90ad4b",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/disarm_control/gateway.py",
+    "snapshot": "installed/frontend_gateway/disarm_control/gateway.py",
+    "sha256": "6a9c3ec4316c20a5dede693e595fc5e8b1706dd48186d630eec0b52d9b44f95f",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/disarm_control/inhibit.py",
+    "snapshot": "installed/frontend_gateway/disarm_control/inhibit.py",
+    "sha256": "5b2035dce6a1df69c7c9ae4505ba9179b7cc66f39aa00b74b772979f51a25cd3",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/disarm_control/ipc.py",
+    "snapshot": "installed/frontend_gateway/disarm_control/ipc.py",
+    "sha256": "728901bfb25b1eb9dd55cc8da31775db19e63f734200cfd20a71b1b2ec8774b3",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/__init__.py",
+    "snapshot": "installed/frontend_gateway/owner/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/stop_latch_test/__init__.py",
+    "snapshot": "installed/frontend_gateway/owner/stop_latch_test/__init__.py",
+    "sha256": "739fea1603f7118b1e04d05ea1d686fcf72cd92e0cb57928023c480f95543533",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/stop_latch_test/hold.html",
+    "snapshot": "installed/frontend_gateway/owner/stop_latch_test/hold.html",
+    "sha256": "01dd0e71e34b2ef292886b145b2f253274649f886f313cdee3d40bda5ebb4336",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/stop_latch_test/hold.js",
+    "snapshot": "installed/frontend_gateway/owner/stop_latch_test/hold.js",
+    "sha256": "9dae77ecf3d647bca77d2b45e3eb6dffc8017bb0bb8420a8a3dfb58a5272eeac",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/stop_latch_test/hold_bench.py",
+    "snapshot": "installed/frontend_gateway/owner/stop_latch_test/hold_bench.py",
+    "sha256": "13a7574bae870dd2443aa6928ee4d80c4466135b644f340826ff508fa7e89e41",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/stop_latch_test/hold_runner.py",
+    "snapshot": "installed/frontend_gateway/owner/stop_latch_test/hold_runner.py",
+    "sha256": "2918dcb67163127478634576b988e31637159d47c6899d08fb73b9cc30d6ec45",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/stop_latch_test/server.py",
+    "snapshot": "installed/frontend_gateway/owner/stop_latch_test/server.py",
+    "sha256": "528278064c3b61b3487c2795aaa89323dea6ae00548749c9aba0f7be522b3774",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/stop_latch_test/stop_latch.py",
+    "snapshot": "installed/frontend_gateway/owner/stop_latch_test/stop_latch.py",
+    "sha256": "68771f586e12087c4b879728d2a16511cda1b6a4e2821c2c5bc2f158b7809df0",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/web_hmi/__init__.py",
+    "snapshot": "installed/frontend_gateway/owner/web_hmi/__init__.py",
+    "sha256": "739fea1603f7118b1e04d05ea1d686fcf72cd92e0cb57928023c480f95543533",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/web_hmi/app.py",
+    "snapshot": "installed/frontend_gateway/owner/web_hmi/app.py",
+    "sha256": "6100e815fdab28064762c5c3e7355fe43f1fc7c4002fe06616d3e1368cfb59b3",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/web_hmi/pixhawk_owner_client.py",
+    "snapshot": "installed/frontend_gateway/owner/web_hmi/pixhawk_owner_client.py",
+    "sha256": "300196ce5b7181e61a70f9b68b157d4f4edc44fe894c519d3a419a4ad60243bd",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/web_hmi/pixhawk_telemetry.py",
+    "snapshot": "installed/frontend_gateway/owner/web_hmi/pixhawk_telemetry.py",
+    "sha256": "0c53bba2ffd3298edf7a3f3e8e6121e164707ac67d86d343d082d9a9d79a6845",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/web_hmi/simulator.py",
+    "snapshot": "installed/frontend_gateway/owner/web_hmi/simulator.py",
+    "sha256": "43d0e945db1456b500ab8c0b59fad4731876b071e40ea221246dc8fb94464fda",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/web_hmi/static/app.js",
+    "snapshot": "installed/frontend_gateway/owner/web_hmi/static/app.js",
+    "sha256": "df0f6239c16d9b320ee4f7adf1f31e7b74216d91e23735dd743aa607c85004a5",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/web_hmi/static/style.css",
+    "snapshot": "installed/frontend_gateway/owner/web_hmi/static/style.css",
+    "sha256": "cfeb949d7368fc191036d90a999eb6b603f30885c92d9ccce12a8b6920eaf9cf",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/owner/web_hmi/templates/index.html",
+    "snapshot": "installed/frontend_gateway/owner/web_hmi/templates/index.html",
+    "sha256": "ea32b8d41538453f5af110e80d6490bb16cfc56b63048c8cb5fd517e45536bcf",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/run_checks.py",
+    "snapshot": "installed/frontend_gateway/run_checks.py",
+    "sha256": "36da20a2a5893ed4ee7b409722c58748fd3d04d00811d2f604afab9effc11a6b",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/browser_check.py",
+    "snapshot": "installed/frontend_gateway/tests/browser_check.py",
+    "sha256": "59f254f213e8f5408335c87234fab11a4f1a010a0e5c9d1e0bf42f29019e6a66",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_deploy_profile.py",
+    "snapshot": "installed/frontend_gateway/tests/test_deploy_profile.py",
+    "sha256": "06e685bb558d79a25ccc7bd9c6a68fb48c84f7f2b504063d790a06a42ba168c0",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_e2e.py",
+    "snapshot": "installed/frontend_gateway/tests/test_e2e.py",
+    "sha256": "7d6866e2d03f3977c13ff7e4f1e1cf76789c30f84d44d07477176d27aea51c3e",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_engine.py",
+    "snapshot": "installed/frontend_gateway/tests/test_engine.py",
+    "sha256": "2263592576dad0c1cd5df5c7f9ea473d2a8f02400dee9291a5f03a830e80ea13",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_gateway.py",
+    "snapshot": "installed/frontend_gateway/tests/test_gateway.py",
+    "sha256": "2f4e4990f714f5dad71d143a0c33894c35f05d9762d67e70a878308e98de11b3",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_inhibit.py",
+    "snapshot": "installed/frontend_gateway/tests/test_inhibit.py",
+    "sha256": "e3d34653a7ea6e0c924dc9c23d1e3e2d0e69962d4e48106d3fd31fc3938e6862",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_ipc.py",
+    "snapshot": "installed/frontend_gateway/tests/test_ipc.py",
+    "sha256": "bd96ed2271e52e17d60a9681f00a11399681965f9b5b3fcadc90dd8bfd8b54ef",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_legacy_readonly.py",
+    "snapshot": "installed/frontend_gateway/tests/test_legacy_readonly.py",
+    "sha256": "e400038b97754b5125412b4bf01bca2f86da3ffe377bed58bccbacba2f6bd735",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_owner.py",
+    "snapshot": "installed/frontend_gateway/tests/test_owner.py",
+    "sha256": "e428fa0d7927786ace3dcc411709ab675adcc33032b74d176c2ede366c9bf3e9",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_owner_config.py",
+    "snapshot": "installed/frontend_gateway/tests/test_owner_config.py",
+    "sha256": "5b17d1174c7221775420eb093ad3cfb075a85fff1d1bb1b13824bba9a026af04",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-disarm/package/tests/test_web.py",
+    "snapshot": "installed/frontend_gateway/tests/test_web.py",
+    "sha256": "347a6abb38b0cc3dcfe22052ae3c1becf483e770c84a1e6ee72a898012cd34ac",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active frontend/gateway; base owner retained only as installed"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/disarm_control/__init__.py",
+    "snapshot": "installed/owner_externalnav/disarm_control/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/disarm_control/engine.py",
+    "snapshot": "installed/owner_externalnav/disarm_control/engine.py",
+    "sha256": "fd0ff128852f509ff7b12310887fbfe49dabd094d6a4f5650e53d7ee244920ee",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/disarm_control/gateway.py",
+    "snapshot": "installed/owner_externalnav/disarm_control/gateway.py",
+    "sha256": "6a9c3ec4316c20a5dede693e595fc5e8b1706dd48186d630eec0b52d9b44f95f",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/disarm_control/inhibit.py",
+    "snapshot": "installed/owner_externalnav/disarm_control/inhibit.py",
+    "sha256": "5b2035dce6a1df69c7c9ae4505ba9179b7cc66f39aa00b74b772979f51a25cd3",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/disarm_control/ipc.py",
+    "snapshot": "installed/owner_externalnav/disarm_control/ipc.py",
+    "sha256": "728901bfb25b1eb9dd55cc8da31775db19e63f734200cfd20a71b1b2ec8774b3",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/disarm_control/ledger_policy.py",
+    "snapshot": "installed/owner_externalnav/disarm_control/ledger_policy.py",
+    "sha256": "4e84131ef9c0bbafcfe99859da6a3b59f28b47d95d9bd93af4bcf2b6b41bb33e",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/optical/aruco_active_marker_selector_v8.py",
+    "snapshot": "installed/owner_externalnav/optical/aruco_active_marker_selector_v8.py",
+    "sha256": "5bd95938835368d5bb8dfb62608657e3936c5d8aede428c10f1f0b1a9e08230a",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/optical/bench_geometry.py",
+    "snapshot": "installed/owner_externalnav/optical/bench_geometry.py",
+    "sha256": "4cd5b6170491adb110bdd256e7393b855d8c174ea4cc64b05f939bcf26c6becd",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/optical/bench_optical_worker.py",
+    "snapshot": "installed/owner_externalnav/optical/bench_optical_worker.py",
+    "sha256": "4421679f971c332f49e58e903ee9a6184ae5cd6a61262c96b25ac662fac5537e",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/optical/camera_calibration_fisheye.npz",
+    "snapshot": "installed/owner_externalnav/optical/camera_calibration_fisheye.npz",
+    "sha256": "ca315d373b97009a32c5e8c4b1b6fd8c5db651fc73db667c3b5d37167f45cf10",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/optical/marker_map.json",
+    "snapshot": "installed/owner_externalnav/optical/marker_map.json",
+    "sha256": "b7ee266540631ab54461bf9304cd0ada6923206d8661589e153d1da5dc7d758f",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/optical/owner_optical_worker.py",
+    "snapshot": "installed/owner_externalnav/optical/owner_optical_worker.py",
+    "sha256": "5fa85822f4a0d51874bef7dc6ca26988dfb8ce7e25d7b135570d8d5a2793c1d9",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/optical/pose_transform_2d.py",
+    "snapshot": "installed/owner_externalnav/optical/pose_transform_2d.py",
+    "sha256": "0580d2324699e65b2cc1cfb8f6a7886b8960e0a6c8731e18d6da1ae0a8ee5d4a",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/optical/pose_transform_3d.py",
+    "snapshot": "installed/owner_externalnav/optical/pose_transform_3d.py",
+    "sha256": "221b704836a55cbec13691d44406954c10079bdc7539018e0f06d265b26bfbeb",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/optical/rover_config.json",
+    "snapshot": "installed/owner_externalnav/optical/rover_config.json",
+    "sha256": "855c55022ec6fce6462f4e0df916bba490cdeab5fda66f64ba0492b1d9e68643",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/__init__.py",
+    "snapshot": "installed/owner_externalnav/owner/__init__.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/stop_latch_test/__init__.py",
+    "snapshot": "installed/owner_externalnav/owner/stop_latch_test/__init__.py",
+    "sha256": "739fea1603f7118b1e04d05ea1d686fcf72cd92e0cb57928023c480f95543533",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/stop_latch_test/diagnostics.py",
+    "snapshot": "installed/owner_externalnav/owner/stop_latch_test/diagnostics.py",
+    "sha256": "6d81792f95d7048fc2d6f58fbe8ecce0534f559b5942f3de0e3821520afe9833",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/stop_latch_test/externalnav.py",
+    "snapshot": "installed/owner_externalnav/owner/stop_latch_test/externalnav.py",
+    "sha256": "57bdce99311470a0b58482c47e9b079a7ae3b2e663750d78774646bfc7cad50a",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/stop_latch_test/hold.html",
+    "snapshot": "installed/owner_externalnav/owner/stop_latch_test/hold.html",
+    "sha256": "01dd0e71e34b2ef292886b145b2f253274649f886f313cdee3d40bda5ebb4336",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/stop_latch_test/hold.js",
+    "snapshot": "installed/owner_externalnav/owner/stop_latch_test/hold.js",
+    "sha256": "9dae77ecf3d647bca77d2b45e3eb6dffc8017bb0bb8420a8a3dfb58a5272eeac",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/stop_latch_test/hold_bench.py",
+    "snapshot": "installed/owner_externalnav/owner/stop_latch_test/hold_bench.py",
+    "sha256": "13a7574bae870dd2443aa6928ee4d80c4466135b644f340826ff508fa7e89e41",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/stop_latch_test/hold_runner.py",
+    "snapshot": "installed/owner_externalnav/owner/stop_latch_test/hold_runner.py",
+    "sha256": "610046840d7c78f14d73828a802b7265a384558efc8fab2544cca5874989b736",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/stop_latch_test/server.py",
+    "snapshot": "installed/owner_externalnav/owner/stop_latch_test/server.py",
+    "sha256": "528278064c3b61b3487c2795aaa89323dea6ae00548749c9aba0f7be522b3774",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/stop_latch_test/stop_latch.py",
+    "snapshot": "installed/owner_externalnav/owner/stop_latch_test/stop_latch.py",
+    "sha256": "68771f586e12087c4b879728d2a16511cda1b6a4e2821c2c5bc2f158b7809df0",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/web_hmi/__init__.py",
+    "snapshot": "installed/owner_externalnav/owner/web_hmi/__init__.py",
+    "sha256": "739fea1603f7118b1e04d05ea1d686fcf72cd92e0cb57928023c480f95543533",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/web_hmi/app.py",
+    "snapshot": "installed/owner_externalnav/owner/web_hmi/app.py",
+    "sha256": "6100e815fdab28064762c5c3e7355fe43f1fc7c4002fe06616d3e1368cfb59b3",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/web_hmi/pixhawk_owner_client.py",
+    "snapshot": "installed/owner_externalnav/owner/web_hmi/pixhawk_owner_client.py",
+    "sha256": "300196ce5b7181e61a70f9b68b157d4f4edc44fe894c519d3a419a4ad60243bd",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/web_hmi/pixhawk_telemetry.py",
+    "snapshot": "installed/owner_externalnav/owner/web_hmi/pixhawk_telemetry.py",
+    "sha256": "2a3e89f48243b74b7b20b74dd1a2fe800b7b6c707b4b31495c7d2ae888f6f710",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/web_hmi/simulator.py",
+    "snapshot": "installed/owner_externalnav/owner/web_hmi/simulator.py",
+    "sha256": "43d0e945db1456b500ab8c0b59fad4731876b071e40ea221246dc8fb94464fda",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/web_hmi/static/app.js",
+    "snapshot": "installed/owner_externalnav/owner/web_hmi/static/app.js",
+    "sha256": "df0f6239c16d9b320ee4f7adf1f31e7b74216d91e23735dd743aa607c85004a5",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/web_hmi/static/style.css",
+    "snapshot": "installed/owner_externalnav/owner/web_hmi/static/style.css",
+    "sha256": "cfeb949d7368fc191036d90a999eb6b603f30885c92d9ccce12a8b6920eaf9cf",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/opt/ugv-tilted-observe/20261117/package/owner/web_hmi/templates/index.html",
+    "snapshot": "installed/owner_externalnav/owner/web_hmi/templates/index.html",
+    "sha256": "ea32b8d41538453f5af110e80d6490bb16cfc56b63048c8cb5fd517e45536bcf",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "active stock planar ExternalNav owner; no bench profile"
+  },
+  {
+    "source": "/etc/systemd/system/ugv-hmi.service",
+    "snapshot": "config/rootfs/etc/systemd/system/ugv-hmi.service",
+    "sha256": "16fced029baf0bde79f11893f56a5ae7b95e8fcca8bda0a617eb3776c9fd6f3a",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/systemd/system/ugv-command-gateway.service",
+    "snapshot": "config/rootfs/etc/systemd/system/ugv-command-gateway.service",
+    "sha256": "7ff8d7f4d120fb153b5ff440c571dfc64728f4ba8cde7c81262603f58da34a37",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/systemd/system/ugv-hmi-auth.service",
+    "snapshot": "config/rootfs/etc/systemd/system/ugv-hmi-auth.service",
+    "sha256": "78204848353e07b334dfabf84911d897c1ec2c10af0f3b4d787302a9f5e03a29",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/systemd/system/ugv-hmi.service.d/externalnav-observe.conf",
+    "snapshot": "config/rootfs/etc/systemd/system/ugv-hmi.service.d/externalnav-observe.conf",
+    "sha256": "fc174359bd07a4f5906dd8e744296ec23526d804d1581bd4862c16517a8de6c7",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/systemd/system/ugv-hmi.service.d/tilted-observe.conf",
+    "snapshot": "config/rootfs/etc/systemd/system/ugv-hmi.service.d/tilted-observe.conf",
+    "sha256": "6478ef3b671c5a05a298f96756f92635d9004ad8fa7c69f2d9d13ab19c8b30f2",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/systemd/system/ugv-hmi.service.d/zz-externalnav-tx.conf",
+    "snapshot": "config/rootfs/etc/systemd/system/ugv-hmi.service.d/zz-externalnav-tx.conf",
+    "sha256": "689edaad91ba02277b6144f803f4866accd5adf81874c2176091161345b27c77",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/systemd/system/ugv-hmi-auth.service.d/no-control-socket.conf",
+    "snapshot": "config/rootfs/etc/systemd/system/ugv-hmi-auth.service.d/no-control-socket.conf",
+    "sha256": "9b5b149fd913b69e645306674d2d856db52fb93f73d0fd5e916aa7321cdd10eb",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/run/systemd/system/ugv-command-gateway.service.d/90-disarm-enabled.conf",
+    "snapshot": "config/rootfs/run/systemd/system/ugv-command-gateway.service.d/90-disarm-enabled.conf",
+    "sha256": "e0a180e341f620787b878e6c8f5afe7312aeb065a5629ba9789eb5e2c06ef45d",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/run/systemd/system/ugv-hmi-auth.service.d/90-disarm-enabled.conf",
+    "snapshot": "config/rootfs/run/systemd/system/ugv-hmi-auth.service.d/90-disarm-enabled.conf",
+    "sha256": "263e4f3616a2fdf30de4b8581a68a6433ba3bdfe3b355126aeb73a5a0f360ecb",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/tmpfiles.d/ugv-disarm.conf",
+    "snapshot": "config/rootfs/etc/tmpfiles.d/ugv-disarm.conf",
+    "sha256": "361ce6da1f501afb1d29506b77819e4129279133e9466bf399e444bd53aa5394",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/ugv-externalnav/alignment-verified.json",
+    "snapshot": "config/rootfs/etc/ugv-externalnav/alignment-verified.json",
+    "sha256": "5b4e983f0e7ab423e5c1aeffe4f1c4cc88f6bdbe0fd3a198a312b1d49e6dcddf",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/nginx/nginx.conf",
+    "snapshot": "config/rootfs/etc/nginx/nginx.conf",
+    "sha256": "c66fbe205bf46b5d125502e35605938ed37feef6e2b24325b1c088665caaf477",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/nginx/conf.d/ugv-hmi.conf",
+    "snapshot": "config/rootfs/etc/nginx/conf.d/ugv-hmi.conf",
+    "sha256": "867ce4bef7932862506569ad85b63d194d7b54c38d0620d22017b319242d8b71",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/usr/local/libexec/ugv-pixhawk-owners",
+    "snapshot": "config/rootfs/usr/local/libexec/ugv-pixhawk-owners",
+    "sha256": "b63c4830a1a88943abe020791c717e1f7d5a239aa5a2784bbdd38d8f5ed7505a",
+    "source_mode": "0o755",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/boot/firmware/config.txt",
+    "snapshot": "config/rootfs/boot/firmware/config.txt",
+    "sha256": "4e63bfd1a462b2baa261de09ef5c42a585ebc88535adde9768d0cfdd08eae371",
+    "source_mode": "0o755",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "live configuration; inert recovery evidence"
+  },
+  {
+    "source": "/etc/ugv-disarm/identities.env",
+    "snapshot": "config/rootfs/etc/ugv-disarm/identities.env",
+    "sha256": "f810f17b20a908805319844d31a10015ab046ab5fb3867058a5f33bb85fc995d",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "allowlisted numeric identities/flags/socket paths; no credentials"
+  },
+  {
+    "source": "/run/ugv-disarm-policy/frontend-enabled.env",
+    "snapshot": "config/rootfs/run/ugv-disarm-policy/frontend-enabled.env",
+    "sha256": "4561d3c0dbea4276de078e8bb1d8cab87a9ac91efb27feeb7d89c3b253ffb11b",
+    "source_mode": "0o644",
+    "source_uid": 0,
+    "source_gid": 0,
+    "role": "allowlisted numeric identities/flags/socket paths; no credentials"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/home_externalnav_ready/activate_stock_tx.py",
+    "snapshot": "operations/home_externalnav_ready/activate_stock_tx.py",
+    "sha256": "bc01ad08a39b3ea6a81f33f4541828b01359a7bb21c24759272040cc5f815eed",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "tested activation/logger helper or current-boot HOME evidence; existing tests archived, not rerun"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/home_externalnav_ready/passive_disarm_log.py",
+    "snapshot": "operations/home_externalnav_ready/passive_disarm_log.py",
+    "sha256": "fc20b06e090bd29aa60fb937d8cab0781859e367c7faff504437bd631a5aab8a",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "tested activation/logger helper or current-boot HOME evidence; existing tests archived, not rerun"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/home_externalnav_ready/collect_home_passive.py",
+    "snapshot": "operations/home_externalnav_ready/collect_home_passive.py",
+    "sha256": "38f8dfea9c02413ab1cb155f2fb267f86171158189e796e62ff121fb5c6e19a7",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "tested activation/logger helper or current-boot HOME evidence; existing tests archived, not rerun"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/home_externalnav_ready/home_evidence.json",
+    "snapshot": "operations/home_externalnav_ready/home_evidence.json",
+    "sha256": "a50527c5fbf57666fa9a887ef6b40c1abdedf0a236a79e3a4698ed3dea737dd5",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "tested activation/logger helper or current-boot HOME evidence; existing tests archived, not rerun"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/home_externalnav_ready/test_activate_stock_tx.py",
+    "snapshot": "operations/home_externalnav_ready/test_activate_stock_tx.py",
+    "sha256": "2554f1800a363ec7a14a09e441589cee27ce4c6997d51d62d5a6fe2c766f1bf9",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "tested activation/logger helper or current-boot HOME evidence; existing tests archived, not rerun"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/home_externalnav_ready/test_passive_disarm_log.py",
+    "snapshot": "operations/home_externalnav_ready/test_passive_disarm_log.py",
+    "sha256": "60251a6ea7da98df387e3e63cfe64aec5b9f7d0e0560ae1c02af607f8bbe2ddd",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "tested activation/logger helper or current-boot HOME evidence; existing tests archived, not rerun"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/disarm_install_20261117/channel_ops.py",
+    "snapshot": "operations/disarm_install_20261117/channel_ops.py",
+    "sha256": "f3a4112f737afc3faf0b2c312249eff2359dc83c4e421040438c54831ec5b0b9",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "current operator activation helper; no automatic activation"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/disarm_install_20261117/cutover.py",
+    "snapshot": "operations/disarm_install_20261117/cutover.py",
+    "sha256": "0b2b5b15b44085062436498271bf715d1bcae5356c7c38ba9a4b87786b3f8210",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "current operator activation helper; no automatic activation"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/externalnav_recovery_prepared/README.md",
+    "snapshot": "docs/ledger/README.md",
+    "sha256": "0123ccc4ecd172e22e5bd17f5abc0b50c6814d08e88705023209254aa1c34fc3",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "existing ledger preservation explanation"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/externalnav_recovery_prepared/LEDGER_FIX.md",
+    "snapshot": "docs/ledger/LEDGER_FIX.md",
+    "sha256": "8dfe0ecf0a0ca4afa7f706d2f771a936a2d7e02807b1c1936c25fdad78aadceb",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "existing ledger preservation explanation"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/web_disarm_logs/20261117T171945714683Z/STATIONARY_TEST_ANALYSIS.json",
+    "snapshot": "evidence/stationary/STATIONARY_TEST_ANALYSIS.json",
+    "sha256": "d4e5c8c67df2f28c142bc6416bf68710fc1b52d0c4d7fea0c7410ce7e16a71c0",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "accepted test analysis/report"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/web_disarm_logs/20261117T171945714683Z/STATIONARY_TEST_REPORT.md",
+    "snapshot": "evidence/stationary/STATIONARY_TEST_REPORT.md",
+    "sha256": "82d050fca9f764eccd8843d5bcbd00df6e61232236d266b4804e86895bc983fa",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "accepted test analysis/report"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/web_disarm_logs/20261117T171945714683Z/summary.json",
+    "snapshot": "evidence/stationary/logger_final_summary.json",
+    "sha256": "f03f18c58cff32f19b3cff034c9382bb750488a35f3e30ae3f71faec157b9b80",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "whole logger run summary, may include cycles outside accepted test excerpt"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/web_disarm_logs/20261117T172711284099Z/MOVING_TEST_ANALYSIS.json",
+    "snapshot": "evidence/moving/MOVING_TEST_ANALYSIS.json",
+    "sha256": "af65c76f941990b219d1eb1d566ebb4e967ab3bfad1c47d7944cf8f9a544667d",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "accepted test analysis/report"
+  },
+  {
+    "source": "/home/ugvs2/ugv_optical_navigation/web_disarm_logs/20261117T172711284099Z/MOVING_TEST_REPORT.md",
+    "snapshot": "evidence/moving/MOVING_TEST_REPORT.md",
+    "sha256": "d86fe0015db255d1cda6a64db7d3e1a014684b3dbdcc8d2fc5de4bd676ea875b",
+    "source_mode": "0o664",
+    "source_uid": 1000,
+    "source_gid": 1000,
+    "role": "accepted test analysis/report"
+  }
+]

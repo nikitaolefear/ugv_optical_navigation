@@ -36,3 +36,6 @@ rejected_diag_frames_*/
 *.log
 .vscode/
 .DS_Store
+
+# Local WEB_DISARM_VALIDATED checkpoint archives (sources live under milestones/)
+/backups/WEB_DISARM_VALIDATED_*

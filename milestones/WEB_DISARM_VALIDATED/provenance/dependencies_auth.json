@@ -1,0 +1,50 @@
+[
+  {
+    "name": "blinker",
+    "version": "1.9.0"
+  },
+  {
+    "name": "click",
+    "version": "8.5.1"
+  },
+  {
+    "name": "fastcrc",
+    "version": "0.5.0"
+  },
+  {
+    "name": "Flask",
+    "version": "3.1.3"
+  },
+  {
+    "name": "gunicorn",
+    "version": "27.0.1"
+  },
+  {
+    "name": "itsdangerous",
+    "version": "2.2.0"
+  },
+  {
+    "name": "Jinja2",
+    "version": "3.1.6"
+  },
+  {
+    "name": "lxml",
+    "version": "6.1.3"
+  },
+  {
+    "name": "MarkupSafe",
+    "version": "3.0.4"
+  },
+  {
+    "name": "pip",
+    "version": "25.1.1"
+  },
+  {
+    "name": "pymavlink",
+    "version": "2.4.50"
+  },
+  {
+    "name": "Werkzeug",
+    "version": "3.1.9"
+  }
+]

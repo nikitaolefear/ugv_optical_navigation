@@ -1,0 +1,87 @@
+{
+  "reason": "DURATION_EXPIRED",
+  "utc": "2026-11-17T17:29:45.810436+00:00",
+  "kyiv": "2026-11-17T19:29:45.810436+02:00",
+  "monotonic_s": 2271.754892374,
+  "elapsed_s": 600.0955129240001,
+  "rows": 2909,
+  "arm_observation_transitions": [
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": null,
+      "current": "DISARMED",
+      "receipt_monotonic_s": 1671.783535873,
+      "utc": "2026-11-17T17:19:45.839060+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "DISARMED",
+      "current": "ARMED",
+      "receipt_monotonic_s": 1759.905985005,
+      "utc": "2026-11-17T17:21:13.961490+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 1763.19786375,
+      "utc": "2026-11-17T17:21:17.253333+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "DISARMED",
+      "current": "ARMED",
+      "receipt_monotonic_s": 2160.974946561,
+      "utc": "2026-11-17T17:27:55.030465+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2167.073071428,
+      "utc": "2026-11-17T17:28:01.128570+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "DISARMED",
+      "current": "ARMED",
+      "receipt_monotonic_s": 2172.887600121,
+      "utc": "2026-11-17T17:28:06.943119+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2184.97689065,
+      "utc": "2026-11-17T17:28:19.032395+00:00"
+    }
+  ],
+  "directly_observed_armed_to_disarmed": [
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 1763.19786375,
+      "utc": "2026-11-17T17:21:17.253333+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2167.073071428,
+      "utc": "2026-11-17T17:28:01.128570+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2184.97689065,
+      "utc": "2026-11-17T17:28:19.032395+00:00"
+    }
+  ],
+  "unresolved_observation_sources": [],
+  "control_actions": false,
+  "physical_wheel_stop_measured": false,
+  "wheel_rpm_available": false,
+  "command_execution_causality": "NOT_PROVEN_BY_SENT_ACK_OR_HEARTBEAT_ALONE"
+}

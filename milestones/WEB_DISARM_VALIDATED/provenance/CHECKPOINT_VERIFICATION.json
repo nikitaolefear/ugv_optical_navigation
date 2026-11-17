@@ -1,0 +1,19 @@
+{
+  "verified_at_utc": "2026-11-17T17:39:10.932024+00:00",
+  "installed_copy_and_source_sha256_matches": 144,
+  "package_counts": {
+    "frontend_gateway": 79,
+    "owner_externalnav": 33
+  },
+  "service_pids_unchanged": {
+    "ugv-hmi.service": "21113",
+    "ugv-command-gateway.service": "21158",
+    "ugv-hmi-auth.service": "21163"
+  },
+  "forbidden_production_state_or_private_keys_found": false,
+  "physical_or_unit_tests_repeated": false,
+  "service_or_navigation_mutations": false,
+  "independent_read_only_review": "PASS: complete packages/effective config, no production credentials/DB/keys/caches; excerpts match original log lines",
+  "synthetic_test_fixture_note": "Installed tests retain public synthetic test-only password strings; no actual account passwords/hashes/auth keys were copied.",
+  "moving_logger_final_summary_available": true
+}

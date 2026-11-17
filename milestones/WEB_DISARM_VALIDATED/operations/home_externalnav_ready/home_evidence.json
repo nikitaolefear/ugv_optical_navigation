@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "review_status": "REVIEWED_STOCK_HOME",
+  "reviewed_at_utc": "2026-11-17T17:16:47.016061+00:00",
+  "reviewed_at_kyiv": "2026-11-17T19:16:47.016061+02:00",
+  "boot_id": "ceb8312e-212c-4aab-8456-276f175ffcb2",
+  "package_root": "/opt/ugv-tilted-observe/20261117/package",
+  "sha256": {
+    "camera_calibration_fisheye.npz": "ca315d373b97009a32c5e8c4b1b6fd8c5db651fc73db667c3b5d37167f45cf10",
+    "rover_config.json": "855c55022ec6fce6462f4e0df916bba490cdeab5fda66f64ba0492b1d9e68643",
+    "marker_map.json": "b7ee266540631ab54461bf9304cd0ada6923206d8661589e153d1da5dc7d758f"
+  },
+  "operator_alignment_confirmed": true,
+  "secondary_marker_reviewed": true,
+  "expected_home": {
+    "x_m": 0.0,
+    "y_m": 0.0,
+    "yaw_flu_deg": 0.0
+  },
+  "home_tolerances": {
+    "xy_m": 0.15,
+    "yaw_deg": 5.0
+  },
+  "review_scope": "STATIC_HOME_FRAME_CONSISTENCY_FOR_MANUAL_BENCH_PREPARATION_NOT_NAV_ACCURACY_CERTIFICATION",
+  "stock_output_rezeroed": false,
+  "operator_confirmation": "Operator confirms HOME, stock camera mount, ELRS DISARM and throttle neutral; ID23 covered and ID24 fully open for secondary observation.",
+  "observations": [
+    {
+      "marker": 23,
+      "directory": "/home/ugvs2/ugv_optical_navigation/home_externalnav_observations/20261117T171113Z-boot-home-id23",
+      "unique_frames": 98,
+      "mean_xyyaw_flu": [
+        0.09965264621388521,
+        -0.0483486835791134,
+        -2.2011084703967407
+      ],
+      "std_xyyaw_flu": [
+        0.013443829648691431,
+        0.020392817729436827,
+        0.38978417526640285
+      ],
+      "all_samples_within_home": true
+    },
+    {
+      "marker": 24,
+      "directory": "/home/ugvs2/ugv_optical_navigation/home_externalnav_observations/20261117T171610Z-boot-home-id24",
+      "unique_frames": 6,
+      "mean_xyyaw_flu": [
+        0.08612045713936559,
+        -0.01716028976316671,
+        -2.6422180402579727
+      ],
+      "std_xyyaw_flu": [
+        0.01862167353702629,
+        0.022692150495546768,
+        0.30293098185154727
+      ],
+      "all_samples_within_home": true
+    }
+  ],
+  "secondary_agreement": {
+    "xy_difference_m": 0.03399758888461254,
+    "yaw_difference_deg": 0.44110956986123195
+  },
+  "note": "Entirely new current-boot HTTP observations. ID24 initially had no valid pose; after physical visibility confirmation six distinct valid frames passed HOME limits. No thresholds changed. Activation must recheck live ID23 HOME. TX not activated."
+}

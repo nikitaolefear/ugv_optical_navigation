@@ -1,0 +1,21 @@
+{
+  "milestone": "WEB_DISARM_VALIDATED",
+  "captured_at_utc": "2026-11-17T17:36:45.140098+00:00",
+  "boot_id": "ceb8312e-212c-4aab-8456-276f175ffcb2",
+  "base_git_commit": "ca8512a6a41eec42a73809fdf7ca8e797f81e7a5",
+  "capture_scope": "installed code + explicit non-secret live configuration + accepted test evidence; no restore/deploy actions",
+  "excluded": [
+    "production auth/ledger databases and DB backups",
+    "passwords and password hashes",
+    "auth key and TLS private keys",
+    "private environment/credentials files outside strict allowlist",
+    "virtualenv binaries and caches",
+    "full live raw logs from Git",
+    "unrelated temporary preparations and damaged Git copy"
+  ],
+  "service_pids": {
+    "ugv-hmi.service": "21113",
+    "ugv-command-gateway.service": "21158",
+    "ugv-hmi-auth.service": "21163"
+  }
+}

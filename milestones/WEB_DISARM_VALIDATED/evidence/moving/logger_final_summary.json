@@ -1,0 +1,66 @@
+{
+  "reason": "DURATION_EXPIRED",
+  "utc": "2026-11-17T17:37:11.366864+00:00",
+  "kyiv": "2026-11-17T19:37:11.366864+02:00",
+  "monotonic_s": 2717.311328604,
+  "elapsed_s": 600.0824422350001,
+  "rows": 2920,
+  "arm_observation_transitions": [
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": null,
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2117.342267285,
+      "utc": "2026-11-17T17:27:11.397792+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "DISARMED",
+      "current": "ARMED",
+      "receipt_monotonic_s": 2161.069391743,
+      "utc": "2026-11-17T17:27:55.124897+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2166.895908313,
+      "utc": "2026-11-17T17:28:00.951433+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "DISARMED",
+      "current": "ARMED",
+      "receipt_monotonic_s": 2172.936307452,
+      "utc": "2026-11-17T17:28:06.991814+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2185.065697112,
+      "utc": "2026-11-17T17:28:19.121186+00:00"
+    }
+  ],
+  "directly_observed_armed_to_disarmed": [
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2166.895908313,
+      "utc": "2026-11-17T17:28:00.951433+00:00"
+    },
+    {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2185.065697112,
+      "utc": "2026-11-17T17:28:19.121186+00:00"
+    }
+  ],
+  "unresolved_observation_sources": [],
+  "control_actions": false,
+  "physical_wheel_stop_measured": false,
+  "wheel_rpm_available": false,
+  "command_execution_causality": "NOT_PROVEN_BY_SENT_ACK_OR_HEARTBEAT_ALONE"
+}

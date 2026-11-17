@@ -7,14 +7,14 @@
   let active = false, requestId = null, generation = 0, timer = null;
   let latest = null, renderedAt = 0, disposed = false, pendingUntil = 0;
   const deliveryLabels = {
-    QUEUED: 'Запит прийнято. Надсилання ще не підтверджене.',
-    SENT: 'Команду записано в serial. Виконання цього запиту НЕ підтверджено.',
-    REJECTED: 'Запит відхилено до надсилання.',
-    UNKNOWN: 'Доставка або результат UNKNOWN.'
+    QUEUED: 'У черзі · ще не надіслано.',
+    SENT: 'SENT · виконання НЕ підтверджено.',
+    REJECTED: 'Відхилено · не надіслано.',
+    UNKNOWN: 'Доставка UNKNOWN.'
   };
   function unknown(message) {
     latest = null;
-    notice.textContent = `${message} Стан Pixhawk UNKNOWN. Виконання цього запиту не підтверджено; автоматичного повтору немає.`;
+    notice.textContent = `${message} Стан Pixhawk UNKNOWN. Без автоповтору.`;
   }
   function render(value) {
     if (!value || value.state !== value.delivery_state || value.command_outcome !== 'UNKNOWN' ||
@@ -27,7 +27,7 @@
     renderedAt = performance.now();
     const prefix = deliveryLabels[value.delivery_state];
     if (value.observation_state === 'UNKNOWN') {
-      notice.textContent = `${prefix} Стан Pixhawk UNKNOWN. ${value.observation_pending ? 'Очікуємо свіжу телеметрію.' : 'Перевірте телеметрію перед новим запитом.'}`;
+      notice.textContent = `${prefix} Стан Pixhawk UNKNOWN. ${value.observation_pending ? 'Очікуємо телеметрію.' : 'Перевірте телеметрію.'}`;
       return;
     }
     const source = value.heartbeat_source;
@@ -40,7 +40,7 @@
       throw new Error('Немає достовірного свіжого спостереження.');
     }
     const label = value.observation_state === 'DISARMED_OBSERVED' ? 'Спостерігається DISARMED' : 'Спостерігається ARMED';
-    notice.textContent = `${prefix} ${label}, вік ${value.heartbeat_age_s.toFixed(2)} с, джерело ${source.join('/')}. Це спостереження стану, а не підтвердження виконання конкретного запиту.`;
+    notice.textContent = `${prefix} ${label} · ${value.heartbeat_age_s.toFixed(2)} с · ${source.join('/')}.`;
   }
   async function request(url, options = {}) {
     const started = performance.now();
@@ -110,7 +110,7 @@
     requestId = null;
     recheck.hidden = true;
     button.disabled = false;
-    unknown('Оператор дозволив новий окремий запит.');
+    unknown('Новий запит дозволено оператором.');
   });
   const freshnessTimer = setInterval(() => {
     if (!latest || latest.observation_state === 'UNKNOWN') return;

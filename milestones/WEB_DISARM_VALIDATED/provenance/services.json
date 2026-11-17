@@ -1,0 +1,41 @@
+[
+  {
+    "MainPID": "21113",
+    "ExecStart": "{ path=/opt/ugv-disarm/venv-owner/bin/python ; argv[]=/opt/ugv-disarm/venv-owner/bin/python -u -m stop_latch_test.hold_runner --journal /home/ugvs2/.local/state/ugv-hmi/hold-bench.jsonl --web-disarm-socket /run/ugv-pixhawk-control/backend.sock --web-disarm-db /var/lib/ugv-pixhawk/disarm.sqlite3 --web-disarm-client-uid ${UGV_GATEWAY_UID} --web-disarm-client-gid ${UGV_OWNER_RPC_GID} --inhibit-file /run/ugv-disarm-policy/inhibit --externalnav-tx ; ignore_errors=no ; start_time=[Tue 2026-11-17 17:18:08 UTC] ; stop_time=[n/a] ; pid=21113 ; code=(null) ; status=0/0 }",
+    "WorkingDirectory": "/opt/ugv-tilted-observe/20261117/package/owner",
+    "User": "ugvs2",
+    "Group": "ugvs2",
+    "SupplementaryGroups": "ugv-rpc-owner",
+    "Id": "ugv-hmi.service",
+    "ActiveState": "active",
+    "DropInPaths": "/etc/systemd/system/ugv-hmi.service.d/externalnav-observe.conf /etc/systemd/system/ugv-hmi.service.d/tilted-observe.conf /etc/systemd/system/ugv-hmi.service.d/zz-externalnav-tx.conf",
+    "ActiveEnterTimestamp": "Tue 2026-11-17 17:18:08 UTC",
+    "InvocationID": "78e5b310720741928cdc54ca95173df2"
+  },
+  {
+    "MainPID": "21158",
+    "ExecStart": "{ path=/opt/ugv-disarm/venv-owner/bin/python ; argv[]=/opt/ugv-disarm/venv-owner/bin/python -m disarm_control.gateway --socket /run/ugv-command/ingress.sock --frontend-uid ${UGV_FRONTEND_UID} --ingress-gid ${UGV_FRONTEND_RPC_GID} --backend-socket /run/ugv-pixhawk-control/backend.sock --owner-uid ${UGV_OWNER_UID} --backend-gid ${UGV_OWNER_RPC_GID} --inhibit-file /run/ugv-disarm-policy/inhibit --enable-disarm ; ignore_errors=no ; start_time=[Tue 2026-11-17 17:18:11 UTC] ; stop_time=[n/a] ; pid=21158 ; code=(null) ; status=0/0 }",
+    "WorkingDirectory": "/opt/ugv-disarm/package",
+    "User": "ugv-command",
+    "Group": "ugv-rpc-frontend",
+    "SupplementaryGroups": "ugv-rpc-owner",
+    "Id": "ugv-command-gateway.service",
+    "ActiveState": "active",
+    "DropInPaths": "/run/systemd/system/ugv-command-gateway.service.d/90-disarm-enabled.conf",
+    "ActiveEnterTimestamp": "Tue 2026-11-17 17:18:11 UTC",
+    "InvocationID": "307528307daf4c25aaaa66ddfa60dc65"
+  },
+  {
+    "MainPID": "21163",
+    "ExecStart": "{ path=/opt/ugv-disarm/venv-auth/bin/python ; argv[]=/opt/ugv-disarm/venv-auth/bin/python -m gunicorn --no-control-socket --config python:web_hmi.gunicorn_conf --bind 127.0.0.1:8083 web_hmi.wsgi:create_wsgi_app() ; ignore_errors=no ; start_time=[Tue 2026-11-17 17:18:11 UTC] ; stop_time=[n/a] ; pid=21163 ; code=(null) ; status=0/0 }",
+    "WorkingDirectory": "/opt/ugv-disarm/package/auth",
+    "User": "ugv-hmi",
+    "Group": "ugv-rpc-frontend",
+    "SupplementaryGroups": "",
+    "Id": "ugv-hmi-auth.service",
+    "ActiveState": "active",
+    "DropInPaths": "/run/systemd/system/ugv-hmi-auth.service.d/90-disarm-enabled.conf /etc/systemd/system/ugv-hmi-auth.service.d/no-control-socket.conf",
+    "ActiveEnterTimestamp": "Tue 2026-11-17 17:18:11 UTC",
+    "InvocationID": "a39157fb06d043e495aba05620031cc9"
+  }
+]

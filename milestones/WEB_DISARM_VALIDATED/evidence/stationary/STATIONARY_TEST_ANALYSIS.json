@@ -1,0 +1,151 @@
+{
+  "scope": "STATIONARY_WEB_DISARM_OPERATOR_CONFIRMED_SUCCESS",
+  "operator_confirmation": "Operator reports successful ARM → Web DISARM test on stationary rover and correct operation.",
+  "analyzed_at_utc": "2026-11-17T17:24:13.338633+00:00",
+  "source": "raw.jsonl",
+  "source_prefix": {
+    "bytes": 23070010,
+    "lines": 1295,
+    "sha256": "bddf1f020d294fdab8c73544ed03cd0d0a7297c327775567f7e582b535e9c52c",
+    "still_appending_at_analysis": true,
+    "first_utc": "2026-11-17T17:19:45.715077+00:00",
+    "last_utc": "2026-11-17T17:24:12.475070+00:00"
+  },
+  "boot_id": "ceb8312e-212c-4aab-8456-276f175ffcb2",
+  "armed_observed": {
+    "line": 430,
+    "utc": "2026-11-17T17:21:13.961490+00:00",
+    "kyiv": "2026-11-17T19:21:13.961490+02:00",
+    "monotonic_s": 1759.905985005,
+    "event": {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "DISARMED",
+      "current": "ARMED",
+      "receipt_monotonic_s": 1759.905985005,
+      "utc": "2026-11-17T17:21:13.961490+00:00"
+    }
+  },
+  "disarmed_observed": {
+    "line": 445,
+    "utc": "2026-11-17T17:21:17.253333+00:00",
+    "kyiv": "2026-11-17T19:21:17.253333+02:00",
+    "monotonic_s": 1763.19786375,
+    "event": {
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 1763.19786375,
+      "utc": "2026-11-17T17:21:17.253333+00:00"
+    }
+  },
+  "command": {
+    "id": "b6853e32-6237-45d0-9551-084748b41687",
+    "actor_id": 1,
+    "actor": "mykyta",
+    "state": "SENT",
+    "reason": "DISARMED_STATE_OBSERVED_NOT_COMMAND_PROOF",
+    "created": 1762.67849385,
+    "updated": 1762.856262327,
+    "last_recorded_line": 445
+  },
+  "delivery_evidence": {
+    "id": "b6853e32-6237-45d0-9551-084748b41687",
+    "owner_epoch": "d47c6f6a-a2b9-43d1-bba9-6a97a082694a",
+    "target_system": 1,
+    "target_component": 1,
+    "sent_at": 1762.718313144,
+    "sent_serial": 188,
+    "write_state": "FULL_WRITE"
+  },
+  "estimated_event_times": {
+    "owner_request_accepted": {
+      "monotonic_s": 1762.67849385,
+      "estimated_utc": "2026-11-17T17:21:16.733984+00:00",
+      "estimated_kyiv": "2026-11-17T19:21:16.733984+02:00"
+    },
+    "serial_full_write_completed": {
+      "monotonic_s": 1762.718313144,
+      "estimated_utc": "2026-11-17T17:21:16.773804+00:00",
+      "estimated_kyiv": "2026-11-17T19:21:16.773804+02:00"
+    },
+    "owner_disarmed_observation_recorded": {
+      "monotonic_s": 1762.856262327,
+      "estimated_utc": "2026-11-17T17:21:16.911753+00:00",
+      "estimated_kyiv": "2026-11-17T19:21:16.911753+02:00"
+    }
+  },
+  "latencies_ms": {
+    "owner_accept_to_full_write": 39.81929399992623,
+    "owner_accept_to_owner_disarmed_observation": 177.76847699997234,
+    "full_write_to_owner_disarmed_observation": 137.9491830000461,
+    "owner_accept_to_logger_disarmed_observation": 519.3698999999015,
+    "full_write_to_logger_disarmed_observation": 479.55060599997523,
+    "hmi_initial_request_audit_to_disarmed_audit_wall_clock": 667.4535274505615
+  },
+  "button_click_to_disarmed_ms": null,
+  "button_click_time_status": "NOT_CAPTURED_NO_BROWSER_OR_VIDEO_TIMESTAMP",
+  "ack": {
+    "status": "NOT_RECORDED_BY_PASSIVE_LOGGER",
+    "received": null,
+    "result": null,
+    "absence_of_record_does_not_mean_no_ack": true,
+    "status_rpc_invoked": false
+  },
+  "mavlink_sender_contract_from_installed_code": {
+    "message": "COMMAND_LONG",
+    "command": 400,
+    "param1": 0,
+    "param2": 0,
+    "target_system": 1,
+    "target_component": 1,
+    "delivery_scope": "FULL_SERIAL_WRITE_NOT_AUTOPILOT_RECEIPT_PROOF"
+  },
+  "statustext": [
+    {
+      "at": 1759.2504977,
+      "text": "Throttle armed",
+      "first_seen_line": 428
+    },
+    {
+      "at": 1762.747527053,
+      "text": "Throttle disarmed",
+      "first_seen_line": 444
+    }
+  ],
+  "http_or_ledger_error_counts": {},
+  "test_window_samples": 29,
+  "test_window_optical_all_fresh": true,
+  "command_execution_causality": "OPERATOR_CONFIRMED_FUNCTIONAL_SUCCESS; TELEMETRY_AND_FULL_WRITE_ALONE_DO_NOT_PROVE_REQUEST_CAUSALITY",
+  "physical_wheel_stop_measured": false,
+  "services_changed_during_analysis": false,
+  "control_commands_sent_during_analysis": false,
+  "hmi_audit_read_only_extract": [
+    {
+      "id": 144,
+      "time": 1794936076.7029312,
+      "action": "pixhawk.disarm",
+      "result": "ACCEPTED_BY_GATEWAY",
+      "request_id": "b6853e32-6237-45d0-9551-084748b41687",
+      "kyiv": "2026-11-17T19:21:16.702931+02:00"
+    },
+    {
+      "id": 145,
+      "time": 1794936076.7860606,
+      "action": "pixhawk.disarm.observation",
+      "result": "UNKNOWN",
+      "delivery_state": "QUEUED",
+      "request_id": "b6853e32-6237-45d0-9551-084748b41687",
+      "kyiv": "2026-11-17T19:21:16.786061+02:00"
+    },
+    {
+      "id": 146,
+      "time": 1794936077.3703847,
+      "action": "pixhawk.disarm.observation",
+      "result": "DISARMED_OBSERVED",
+      "delivery_state": "SENT",
+      "reason": "FRESH_POST_SEND_HEARTBEAT",
+      "request_id": "b6853e32-6237-45d0-9551-084748b41687",
+      "kyiv": "2026-11-17T19:21:17.370385+02:00"
+    }
+  ]
+}

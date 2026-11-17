@@ -76,7 +76,9 @@ const notice=document.getElementById('disarm-notice');
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const wait=async(predicate)=>{const limit=performance.now()+15000;while(!predicate()){if(performance.now()>limit)throw new Error('check timeout');await sleep(50);}};
 const rect=button.getBoundingClientRect();
-results.push({name:'touch-target',ok:rect.height>=72&&rect.width>=280});
+const arm=document.getElementById('pixhawk-arm'),armRect=arm.getBoundingClientRect();
+results.push({name:'touch-target',ok:rect.height>=60&&rect.width>=120});
+results.push({name:'arm-placeholder-and-equal-row',ok:arm.disabled&&arm.textContent==='ARM'&&button.textContent==='DISARM'&&Math.abs(rect.width-armRect.width)<1&&rect.height===armRect.height&&rect.y===armRect.y});
 results.push({name:'no-horizontal-overflow',ok:document.documentElement.scrollWidth<=innerWidth});
 for(const mode of ['observed','delivery','rejected','invalid','timeout','stale']){
   scenario=mode;posts=0;gets=0;

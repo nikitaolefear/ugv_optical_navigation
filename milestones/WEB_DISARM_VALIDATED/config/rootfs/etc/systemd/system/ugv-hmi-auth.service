@@ -1,0 +1,33 @@
+[Unit]
+Description=UGV authenticated HMI, DISARM OFF, no serial
+After=network-online.target ugv-command-gateway.service
+[Service]
+Type=simple
+User=ugv-hmi
+Group=ugv-rpc-frontend
+WorkingDirectory=/opt/ugv-disarm/package/auth
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONPATH=/opt/ugv-disarm/package/auth:/opt/ugv-disarm/package
+Environment=UGV_HMI_STATE_DIR=/var/lib/ugv-hmi
+Environment=UGV_HMI_PUBLIC_ORIGIN=https://192.168.110.59
+Environment=UGV_HMI_TRUST_PROXY=1
+EnvironmentFile=/etc/ugv-disarm/identities.env
+UnsetEnvironment=GUNICORN_CMD_ARGS
+ExecStart=/opt/ugv-disarm/venv-auth/bin/python -m gunicorn --config python:web_hmi.gunicorn_conf --bind 127.0.0.1:8083 "web_hmi.wsgi:create_wsgi_app()"
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/ugv-hmi
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+UMask=0077
+Restart=no
+[Install]
+WantedBy=multi-user.target

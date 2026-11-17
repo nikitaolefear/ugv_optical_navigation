@@ -1,0 +1,28 @@
+<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="{{ csrf }}"><title>Керування доступом — UGV №1</title><link rel="stylesheet" href="/static/style.css"><script src="/static/account.js" defer></script><script src="/static/access.js" defer></script></head>
+<body><main>{% include 'account.html' %}<h1>Керування користувачами й ролями</h1>
+<p>Ранг визначає, ким можна керувати. Дозволи визначають доступні дії. Зміни доступу завершують попередні сесії користувачів.</p>
+<p id="access-message" role="status" aria-live="polite"></p>
+{% if can('users.manage') %}
+<section><h2>Створити користувача</h2><form class="access-form" data-url="/api/admin/users" data-kind="user-create">
+<label>Логін <input name="username" required minlength="3" maxlength="64" pattern="[a-zA-Z0-9_.-]+" autocomplete="off"></label>
+<label>Пароль <input name="password" type="password" required minlength="8" maxlength="128" autocomplete="new-password"></label>
+<label>Роль <select name="role" required>{% for role in assignable_roles %}<option value="{{ role.name }}">{{ role.name }} · ранг {{ role.rank }}</option>{% endfor %}</select></label><button>Створити користувача</button></form></section>
+<section><h2>Користувачі</h2><div class="access-grid">{% for target in users %}
+<article class="access-card"><h3>{{ target.username }}</h3><p>Роль: {{ target.role }} · ранг {{ role_map[target.role].rank }} · {{ 'Активний' if target.active else 'Заблокований' }}</p>
+{% if user.role == 'superadmin' or (target.id != user.id and role_map[target.role].rank < user.rank) %}
+<form class="access-form" data-url="/api/admin/users/{{ target.id }}" data-kind="user-role"><label>Нова роль <select name="role">{% for role in assignable_roles %}<option value="{{ role.name }}" {% if role.name == target.role %}selected{% endif %}>{{ role.name }} · {{ role.rank }}</option>{% endfor %}</select></label><button>Змінити роль</button></form>
+<form class="access-form" data-url="/api/admin/users/{{ target.id }}" data-kind="user-password"><label>Новий пароль <input name="password" type="password" required minlength="8" maxlength="128" autocomplete="new-password"></label><button>Змінити пароль</button></form>
+<form class="access-form" data-url="/api/admin/users/{{ target.id }}" data-kind="{{ 'block' if target.active else 'unblock' }}"><button>{{ 'Заблокувати' if target.active else 'Розблокувати' }}</button></form>
+<form class="access-form" data-url="/api/admin/users/{{ target.id }}" data-kind="user-delete" data-confirm="Видалити користувача {{ target.username }}? Вхід буде закрито. Історія місій і журнал залишаться."><button class="danger">Видалити користувача</button></form>
+{% else %}<p>Цей обліковий запис поза межами ваших повноважень.</p>{% endif %}</article>{% endfor %}</div></section>{% endif %}
+{% if can('roles.manage') %}
+<section><h2>Створити роль</h2><form class="access-form" data-url="/api/admin/roles" data-kind="role-create">
+<label>Назва <input name="name" required minlength="3" maxlength="32" pattern="[a-z][a-z0-9_-]{2,31}"></label><label>Ранг <input name="rank" type="number" min="1" max="{{ user.rank - 1 }}" required></label>
+<fieldset><legend>Дозволи</legend>{% for key, label in permissions.items() %}{% if user.role == 'superadmin' or key in user.permissions %}<label class="permission"><input type="checkbox" name="permissions" value="{{ key }}">{{ label }} <small>{{ key }}</small></label>{% endif %}{% endfor %}</fieldset><button>Створити роль</button></form></section>
+<section><h2>Ролі й дозволи</h2><div class="access-grid">{% for role in roles %}<article class="access-card"><h3>{{ role.name }} · ранг {{ role.rank }}</h3>
+{% if user.role == 'superadmin' or role.rank < user.rank %}
+<form class="access-form" data-url="/api/admin/roles/{{ role.name }}" data-kind="role-edit"><label>Ранг <input name="rank" type="number" min="1" max="{{ 1000 if role.name == 'superadmin' else user.rank - 1 }}" value="{{ role.rank }}" required></label><fieldset><legend>Дозволи</legend>{% for key, label in permissions.items() %}{% if user.role == 'superadmin' or key in user.permissions %}<label class="permission"><input type="checkbox" name="permissions" value="{{ key }}" {% if key in role.permissions %}checked{% endif %} {% if role.name == 'superadmin' and key in ('users.manage','roles.manage') %}required{% endif %}>{{ label }} <small>{{ key }}</small></label>{% endif %}{% endfor %}</fieldset><button>Зберегти роль</button></form>
+<form class="access-form" data-url="/api/admin/roles/{{ role.name }}" data-kind="role-delete" data-confirm="Видалити роль {{ role.name }}? Призначену користувачам роль видалити неможливо."><button class="danger">Видалити роль</button></form>
+{% else %}<p>Роль поза межами ваших повноважень.</p><ul>{% for permission in role.permissions %}<li>{{ permissions[permission] }}</li>{% endfor %}</ul>{% endif %}</article>{% endfor %}</div></section>{% endif %}
+<p>Видалення користувача закриває вхід, відкликає сесії та зберігає історичний ID. Його логін не можна повторно використати. Роль, на яку посилаються користувачі або їхня історія, видаляти заборонено.</p>
+</main></body></html>

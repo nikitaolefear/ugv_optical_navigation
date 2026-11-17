@@ -1,0 +1,12 @@
+{
+  "camera_mount_verified": true,
+  "mapped_markers_verified": true,
+  "boot_id": "ceb8312e-212c-4aab-8456-276f175ffcb2",
+  "sha256": {
+    "camera_calibration_fisheye.npz": "ca315d373b97009a32c5e8c4b1b6fd8c5db651fc73db667c3b5d37167f45cf10",
+    "rover_config.json": "855c55022ec6fce6462f4e0df916bba490cdeab5fda66f64ba0492b1d9e68643",
+    "marker_map.json": "b7ee266540631ab54461bf9304cd0ada6923206d8661589e153d1da5dc7d758f"
+  },
+  "reviewed_evidence_sha256": "9dfdc656ab126fa0ef54b37f751f5d8b7ff5667c2577758bebefcff552599475",
+  "verified_at_utc": "2026-11-17T17:17:58.306262+00:00"
+}

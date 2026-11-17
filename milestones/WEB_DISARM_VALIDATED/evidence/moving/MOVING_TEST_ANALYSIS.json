@@ -1,0 +1,214 @@
+{
+  "test": "CONTROLLED_MOVING_WEB_DISARM",
+  "operator_confirmation": "ровер зупинився після натискання",
+  "physical_stop_confirmed_by_operator": true,
+  "wheel_stop_timestamp_measured": false,
+  "analyzed_at_utc": "2026-11-17T17:30:09.650874+00:00",
+  "boot_id": "ceb8312e-212c-4aab-8456-276f175ffcb2",
+  "source_prefix": {
+    "bytes": 17732204,
+    "lines": 863,
+    "sha256": "d4974291927bf32edcf7bf91e56662d3ffb6c821609bda0e865e0983bfafe6e7",
+    "still_appending": true,
+    "last_utc": "2026-11-17T17:30:09.251361+00:00"
+  },
+  "command": {
+    "id": "a6cfc772-f126-4f05-bce3-305742198884",
+    "actor_id": 1,
+    "actor": "mykyta",
+    "state": "SENT",
+    "reason": "DISARMED_STATE_OBSERVED_NOT_COMMAND_PROOF",
+    "created": 2183.996699658,
+    "updated": 2184.867557128
+  },
+  "delivery_evidence": {
+    "id": "a6cfc772-f126-4f05-bce3-305742198884",
+    "owner_epoch": "d47c6f6a-a2b9-43d1-bba9-6a97a082694a",
+    "target_system": 1,
+    "target_component": 1,
+    "sent_at": 2184.044784705,
+    "sent_serial": 610,
+    "write_state": "FULL_WRITE"
+  },
+  "web_test_armed": {
+    "line": 271,
+    "utc": "2026-11-17T17:28:06.991814+00:00",
+    "kyiv": "2026-11-17T19:28:06.991814+02:00",
+    "monotonic_s": 2172.936307452,
+    "kind": "ARM_STATE_OBSERVED",
+    "previous": "DISARMED",
+    "current": "ARMED",
+    "receipt_monotonic_s": 2172.936307452
+  },
+  "web_test_disarmed": {
+    "line": 329,
+    "utc": "2026-11-17T17:28:19.121186+00:00",
+    "kyiv": "2026-11-17T19:28:19.121186+02:00",
+    "monotonic_s": 2185.065697112,
+    "kind": "ARM_STATE_OBSERVED",
+    "previous": "ARMED",
+    "current": "DISARMED",
+    "receipt_monotonic_s": 2185.065697112
+  },
+  "all_observed_transitions": [
+    {
+      "line": 2,
+      "utc": "2026-11-17T17:27:11.397792+00:00",
+      "kyiv": "2026-11-17T19:27:11.397792+02:00",
+      "monotonic_s": 2117.342267285,
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": null,
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2117.342267285
+    },
+    {
+      "line": 213,
+      "utc": "2026-11-17T17:27:55.124897+00:00",
+      "kyiv": "2026-11-17T19:27:55.124897+02:00",
+      "monotonic_s": 2161.069391743,
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "DISARMED",
+      "current": "ARMED",
+      "receipt_monotonic_s": 2161.069391743
+    },
+    {
+      "line": 241,
+      "utc": "2026-11-17T17:28:00.951433+00:00",
+      "kyiv": "2026-11-17T19:28:00.951433+02:00",
+      "monotonic_s": 2166.895908313,
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2166.895908313
+    },
+    {
+      "line": 271,
+      "utc": "2026-11-17T17:28:06.991814+00:00",
+      "kyiv": "2026-11-17T19:28:06.991814+02:00",
+      "monotonic_s": 2172.936307452,
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "DISARMED",
+      "current": "ARMED",
+      "receipt_monotonic_s": 2172.936307452
+    },
+    {
+      "line": 329,
+      "utc": "2026-11-17T17:28:19.121186+00:00",
+      "kyiv": "2026-11-17T19:28:19.121186+02:00",
+      "monotonic_s": 2185.065697112,
+      "kind": "ARM_STATE_OBSERVED",
+      "previous": "ARMED",
+      "current": "DISARMED",
+      "receipt_monotonic_s": 2185.065697112
+    }
+  ],
+  "earlier_disarm_without_new_web_uuid": "19:28:00.951433 Kyiv; not attributed to Web DISARM",
+  "latencies_ms": {
+    "owner_accept_to_full_write": 48.085046999858605,
+    "owner_accept_to_owner_disarmed_observation": 870.857469999919,
+    "owner_accept_to_logger_disarmed_observation": 1068.9974540000549,
+    "hmi_initial_request_audit_to_disarmed_audit_wall_clock": 1184.8649978637695
+  },
+  "hmi_audit_read_only_extract": [
+    {
+      "id": 149,
+      "time": 1794936498.033019,
+      "action": "pixhawk.disarm",
+      "result": "ACCEPTED_BY_GATEWAY"
+    },
+    {
+      "id": 150,
+      "time": 1794936498.108895,
+      "action": "pixhawk.disarm.observation",
+      "result": "UNKNOWN",
+      "delivery_state": "QUEUED"
+    },
+    {
+      "id": 151,
+      "time": 1794936498.6693954,
+      "action": "pixhawk.disarm.observation",
+      "result": "UNKNOWN",
+      "delivery_state": "SENT",
+      "reason": "NO_POST_SEND_HEARTBEAT"
+    },
+    {
+      "id": 152,
+      "time": 1794936499.217884,
+      "action": "pixhawk.disarm.observation",
+      "result": "DISARMED_OBSERVED",
+      "delivery_state": "SENT",
+      "reason": "FRESH_POST_SEND_HEARTBEAT"
+    }
+  ],
+  "ack_status": "NOT_CAPTURED_BY_FIXED_PASSIVE_ENDPOINTS; unknown, not proof of absence",
+  "browser_click_to_disarmed_ms": null,
+  "event_window_http_errors": [],
+  "event_window_optical_all_fresh": true,
+  "vision_position_health_changes": [
+    {
+      "line": 271,
+      "utc": "2026-11-17T17:28:06.991814+00:00",
+      "kyiv": "2026-11-17T19:28:06.991814+02:00",
+      "vision_position_health": true,
+      "sys_status_age_s": 0.9678975150000042
+    },
+    {
+      "line": 329,
+      "utc": "2026-11-17T17:28:19.121186+00:00",
+      "kyiv": "2026-11-17T19:28:19.121186+02:00",
+      "vision_position_health": false,
+      "sys_status_age_s": 0.09210171599988826
+    },
+    {
+      "line": 334,
+      "utc": "2026-11-17T17:28:20.105707+00:00",
+      "kyiv": "2026-11-17T19:28:20.105707+02:00",
+      "vision_position_health": true,
+      "sys_status_age_s": 0.08565491199988173
+    },
+    {
+      "line": 348,
+      "utc": "2026-11-17T17:28:23.241921+00:00",
+      "kyiv": "2026-11-17T19:28:23.241921+02:00",
+      "vision_position_health": false,
+      "sys_status_age_s": 0.049590369000270584
+    },
+    {
+      "line": 585,
+      "utc": "2026-11-17T17:29:12.127293+00:00",
+      "kyiv": "2026-11-17T19:29:12.127293+02:00",
+      "vision_position_health": true,
+      "sys_status_age_s": 0.1334242939997239
+    }
+  ],
+  "observation_source_events": [
+    {
+      "line": 345,
+      "utc": "2026-11-17T17:28:22.471711+00:00",
+      "kind": "OBSERVATION_SOURCE_LOST",
+      "source": "fresh_optical_pose",
+      "meaning": "NO_CONTROL_ACTION_AND_NO_WHEEL_STOP_INFERENCE"
+    },
+    {
+      "line": 582,
+      "utc": "2026-11-17T17:29:11.539316+00:00",
+      "kind": "OBSERVATION_SOURCE_RECOVERED",
+      "source": "fresh_optical_pose"
+    },
+    {
+      "line": 752,
+      "utc": "2026-11-17T17:29:46.525082+00:00",
+      "kind": "OBSERVATION_SOURCE_LOST",
+      "source": "fresh_optical_pose",
+      "meaning": "NO_CONTROL_ACTION_AND_NO_WHEEL_STOP_INFERENCE"
+    },
+    {
+      "line": 753,
+      "utc": "2026-11-17T17:29:46.669760+00:00",
+      "kind": "OBSERVATION_SOURCE_RECOVERED",
+      "source": "fresh_optical_pose"
+    }
+  ],
+  "services_or_parameters_changed": false,
+  "control_commands_sent_by_agent": false
+}
