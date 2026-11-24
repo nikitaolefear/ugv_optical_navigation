@@ -1,0 +1,58 @@
+--- a/owner/stop_latch_test/diagnostics.py
++++ b/owner/stop_latch_test/diagnostics.py
+@@ -16,13 +16,19 @@
+         'SERIAL1_PROTOCOL','SERIAL2_PROTOCOL','SERIAL3_PROTOCOL','SERIAL4_PROTOCOL',
+         'SERIAL5_PROTOCOL','SERIAL6_PROTOCOL','SERIAL7_PROTOCOL','SERIAL8_PROTOCOL')
+ 
++BRAKE_SERVO_PARAMS = tuple(
++    f'SERVO{channel}_{field}'
++    for channel in (5, 6)
++    for field in ('FUNCTION', 'MIN', 'MAX', 'TRIM', 'REVERSED')
++)
++
+ 
+ class Diagnostics:
+-    def __init__(self,reader,encoder,query=False,write=os.write, *, pwm_observe=False, pwm_interval=None):
++    def __init__(self,reader,encoder,query=False,write=os.write, *, pwm_observe=False, pwm_interval=None, brake_servo_query=False):
+         self.reader,self.encoder,self.query,self.write=reader,encoder,query,write
+         self.texts=deque(maxlen=100);self.rc=None;self.sys=None;self.params={}
+         self.overrides=deque(maxlen=20)
+-        self.queue=deque(PARAMS if query else ())
++        self.queue=deque(BRAKE_SERVO_PARAMS if brake_servo_query else PARAMS if query else ())
+         self.attempted=[];self.last_query=None;self.fault=False
+         self.pwm_observe = pwm_observe
+         self.pwm_interval = pwm_interval
+@@ -111,7 +117,9 @@
+                     self.rc['received_unix_s'] = time.time()
+             elif k=='SYS_STATUS':
+                 self.sys=dict(at=now,present=int(msg.onboard_control_sensors_present),enabled=int(msg.onboard_control_sensors_enabled),health=int(msg.onboard_control_sensors_health))
+-            elif k=='PARAM_VALUE' and str(msg.param_id) in PARAMS:
++            elif k=='PARAM_VALUE' and (str(msg.param_id) in PARAMS or
++                                      (str(msg.param_id) in BRAKE_SERVO_PARAMS and
++                                       str(msg.param_id) in self.attempted)):
+                 value=float(msg.param_value)
+                 if math.isfinite(value):self.params[str(msg.param_id)]=dict(value=value,at=now)
+ 
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -35,7 +35,10 @@
+     pwm.add_argument('--observe-brake-pwm', action='store_true')
+     pwm.add_argument('--brake-pwm-interval-us', type=int, choices=(500000, 0, -1),
+                      help='Observe outputs and opt into one telemetry-only interval request')
++    parser.add_argument('--read-brake-servo-params', action='store_true')
+     args = parser.parse_args(argv)
++    if args.read_brake_servo_params and not args.observe_brake_pwm:
++        parser.error('Brake servo parameter reads require the passive PWM profile')
+     pwm_enabled = args.observe_brake_pwm or args.brake_pwm_interval_us is not None
+     if pwm_enabled and (not args.web_disarm_socket or not args.externalnav_observe_only
+                         or args.enable_bench_hold or args.diagnostic_params):
+@@ -71,7 +74,8 @@
+         encoder=mav.MAVLink(None,srcSystem=255,srcComponent=190)
+     diagnostics=Diagnostics(reader,encoder,query=args.diagnostic_params,
+                             pwm_observe=(args.observe_brake_pwm or args.brake_pwm_interval_us is not None),
+-                            pwm_interval=args.brake_pwm_interval_us)
++                            pwm_interval=args.brake_pwm_interval_us,
++                            brake_servo_query=args.read_brake_servo_params)
+     nav=None
+     if args.externalnav_observe_only or args.externalnav_tx:
+         from stop_latch_test.externalnav import ExternalNav

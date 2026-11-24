@@ -1,0 +1,74 @@
+--- a/owner/stop_latch_test/diagnostics.py
++++ b/owner/stop_latch_test/diagnostics.py
+@@ -16,12 +16,30 @@
+         'SERIAL5_PROTOCOL','SERIAL6_PROTOCOL','SERIAL7_PROTOCOL','SERIAL8_PROTOCOL')
+ 
+ 
++BRAKE_PARAMS = tuple(
++    f'SERVO{channel}_{field}'
++    for field in ('FUNCTION', 'MIN', 'MAX', 'TRIM', 'REVERSED')
++    for channel in range(1, 17)
++) + (
++    'RCMAP_ROLL', 'RCMAP_PITCH', 'RCMAP_THROTTLE', 'RCMAP_YAW',
++    'RC8_OPTION', 'RC8_MIN', 'RC8_MAX', 'RC8_TRIM', 'RC8_DZ', 'RC8_REVERSED',
++    'RC_OPTIONS', 'RC_PROTOCOLS', 'SERVO_RC_FS_MSK', 'SERVO_GPIO_MASK',
++    'BRD_SAFETY_DEFLT', 'BRD_SAFETYOPTION', 'BRD_SAFETY_MASK', 'BRD_IO_ENABLE',
++    'SERVO_RATE', 'SCR_ENABLE', 'FS_THR_ENABLE', 'FS_THR_VALUE', 'FS_TIMEOUT',
++    'FS_ACTION', 'FS_OPTIONS', 'FS_GCS_ENABLE', 'FS_GCS_TIMEOUT', 'FS_EKF_ACTION',
++    'FS_EKF_THRESH', 'FS_CRASH_CHECK',
++)
++
++
+ class Diagnostics:
+-    def __init__(self,reader,encoder,query=False,write=os.write):
++    def __init__(self,reader,encoder,query=False,write=os.write,*,brake_query=False):
+         self.reader,self.encoder,self.query,self.write=reader,encoder,query,write
+         self.texts=deque(maxlen=100);self.rc=None;self.sys=None;self.params={}
+         self.overrides=deque(maxlen=20)
+-        self.queue=deque(PARAMS if query else ());self.attempted=[];self.last_query=None;self.fault=False
++        self.requested = tuple(dict.fromkeys((PARAMS if query else ()) +
++                                             (BRAKE_PARAMS if brake_query else ())))
++        self.queue = deque(self.requested)
++        self.attempted=[];self.last_query=None;self.fault=False
+ 
+     def observe(self,msg):
+         k=msg.get_type();now=self.reader.clock()
+@@ -35,7 +53,8 @@
+                 self.rc=dict(at=now,channels={str(i):int(getattr(msg,f'chan{i}_raw')) for i in range(1,min(18,msg.chancount)+1)},rssi=int(msg.rssi),time_boot_ms=int(msg.time_boot_ms))
+             elif k=='SYS_STATUS':
+                 self.sys=dict(at=now,present=int(msg.onboard_control_sensors_present),enabled=int(msg.onboard_control_sensors_enabled),health=int(msg.onboard_control_sensors_health))
+-            elif k=='PARAM_VALUE' and str(msg.param_id) in PARAMS:
++            elif k=='PARAM_VALUE' and (str(msg.param_id) in PARAMS or
++                                      (str(msg.param_id) in BRAKE_PARAMS and str(msg.param_id) in self.attempted)):
+                 value=float(msg.param_value)
+                 if math.isfinite(value):self.params[str(msg.param_id)]=dict(value=value,at=now)
+ 
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -24,6 +24,7 @@
+     parser.add_argument('--externalnav-bench-profile',
+                         help='Measured ID24 6DoF profile; OBSERVE_ONLY, never TX')
+     parser.add_argument('--diagnostic-params',action='store_true')
++    parser.add_argument('--diagnostic-brake-params', action='store_true')
+     parser.add_argument('--enable-bench-hold', action='store_true',
+                         help='Maintenance only; legacy HTTP mutations remain disabled')
+     parser.add_argument('--web-disarm-socket', help='Explicit opt-in; private Unix socket path')
+@@ -43,7 +44,7 @@
+             parser.error('DISARM requires a distinct nonroot gateway UID and private client GID')
+     elif args.web_disarm_client_uid is not None or args.web_disarm_client_gid is not None:
+         parser.error('Gateway credentials require the explicit DISARM socket/database')
+-    if (args.externalnav_observe_only or args.externalnav_tx or args.diagnostic_params) and not args.web_disarm_socket:
++    if (args.externalnav_observe_only or args.externalnav_tx or args.diagnostic_params or args.diagnostic_brake_params) and not args.web_disarm_socket:
+         parser.error('ExternalNav/diagnostics require the existing DISARM owner profile')
+     return args
+ 
+@@ -61,7 +62,8 @@
+     if encoder is None:
+         from pymavlink.dialects.v20 import ardupilotmega as mav
+         encoder=mav.MAVLink(None,srcSystem=255,srcComponent=190)
+-    diagnostics=Diagnostics(reader,encoder,query=args.diagnostic_params)
++    diagnostics=Diagnostics(reader,encoder,query=args.diagnostic_params,
++                            brake_query=args.diagnostic_brake_params)
+     nav=None
+     if args.externalnav_observe_only or args.externalnav_tx:
+         from stop_latch_test.externalnav import ExternalNav

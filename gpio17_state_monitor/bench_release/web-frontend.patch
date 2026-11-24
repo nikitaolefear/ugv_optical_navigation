@@ -1,0 +1,247 @@
+--- a/disarm_control/ipc.py
++++ b/disarm_control/ipc.py
+@@ -107,7 +107,7 @@
+         if set(self.arm_operations) - {'ARM', 'ARM_READY', 'ARM_STATUS'}:
+             raise ValueError('Invalid ARM operations')
+         self.disarm_request = disarm_request or engine.request
+-        if set(self.stop_operations) - {'STOP_STATUS', 'STOP_RESET'}:
++        if set(self.stop_operations) - {'STOP_STATUS', 'STOP_RESET', 'BENCH_RELEASE'}:
+             raise ValueError('Invalid STOP operations')
+         self.allowed_uid = os.getuid() if allowed_uid is None else allowed_uid
+         if type(self.allowed_uid) is not int or self.allowed_uid < 0:
+--- a/disarm_control/gateway.py
++++ b/disarm_control/gateway.py
+@@ -97,9 +97,35 @@
+                 type(value.get('reset_available')) is not bool or
+                 type(value.get('physical_drive_interlocked')) is not bool):
+             raise Rejected('INVALID_STOP_RESPONSE')
+-        if operation == 'STOP_STATUS' and not getattr(self, 'stop_reset_enabled', False):
+-            return dict(value, reset_available=False)
++        if operation == 'STOP_STATUS':
++            value = dict(value)
++            ready = value.pop('bench_release_available', False)
++            if self._bench_allowed():
++                value['bench_release_available'] = (
++                    ready is True and value['stop_latch'] is True and
++                    value['reset_available'] is False and value['physical_drive_interlocked'] is False)
++            if not getattr(self, 'stop_reset_enabled', False):
++                value['reset_available'] = False
+         return value
++
++    def _bench_allowed(self):
++        return (getattr(self, 'bench_release_enabled', False) and not self._enabled and
++                not getattr(self, 'arm_enabled', False) and
++                not getattr(self, 'stop_reset_enabled', False) and
++                self.inhibit is not None and self.inhibit.path.is_file() and self._inhibited())
++
++    def bench_release(self, actor_id, actor, request_id):
++        validate_actor(actor_id, actor, request_id)
++        if not self._bench_allowed():
++            raise Rejected('BENCH_RELEASE_DISABLED')
++        reply = self.backend.call('BENCH_RELEASE', {'id': actor_id, 'username': actor}, request_id)
++        value = reply.get('command') if isinstance(reply, dict) and reply.get('ok') is True else None
++        if (type(value) is not dict or value.get('request_id') != request_id or
++                type(value.get('bench_release_accepted')) is not bool or
++                value.get('stop_latch') is not True or value.get('reset_available') is not False):
++            raise Rejected('INVALID_BENCH_RELEASE_RESPONSE')
++        return {key: value[key] for key in (
++            'request_id', 'bench_release_accepted', 'stop_latch', 'reset_available')}
+ 
+     def arm_operation(self, operation, actor_id, actor, request_id):
+         validate_actor(actor_id, actor, request_id)
+@@ -190,7 +216,12 @@
+                         help='Presence inhibits DISARM; parent must be root-owned/non-writable')
+     parser.add_argument('--enable-stop-reset', action='store_true', help='Only after native STOP integration acceptance')
+     parser.add_argument('--web-arm-boot-id', help='Current boot UUID for a transient ARM opt-in')
++    parser.add_argument('--bench-release-boot-id', help='Current boot UUID for isolated brake test')
+     args = parser.parse_args(argv)
++    if args.bench_release_boot_id and (
++            not boot_arm_enabled(args.bench_release_boot_id) or args.enable_disarm or
++            args.enable_stop_reset or args.web_arm_boot_id or not Path(args.inhibit_file).is_file()):
++        parser.error('Isolated brake test requires current boot, DISARM inhibit and all normal controls OFF')
+     logging.basicConfig(level=logging.INFO, format='%(levelname)s %(name)s %(message)s')
+     uid = os.getuid()
+     if os.geteuid() == 0 or uid == 0:
+@@ -205,11 +236,15 @@
+     gateway = CommandGateway(backend, enabled=args.enable_disarm, inhibit_file=args.inhibit_file)
+     gateway.stop_reset_enabled = args.enable_stop_reset
+     gateway.arm_enabled = boot_arm_enabled(args.web_arm_boot_id)
++    gateway.bench_release_enabled = bool(args.bench_release_boot_id)
++    stop_operations = {op: (lambda aid, actor, rid, op=op: gateway.stop_operation(op, aid, actor, rid))
++                       for op in ('STOP_STATUS', 'STOP_RESET')}
++    if gateway.bench_release_enabled:
++        stop_operations['BENCH_RELEASE'] = gateway.bench_release
+     server = OwnerServer(gateway, args.socket, allowed_uid=args.frontend_uid,
+         arm_operations={op: (lambda aid, actor, rid, op=op: gateway.arm_operation(op, aid, actor, rid))
+                         for op in ('ARM', 'ARM_READY', 'ARM_STATUS')},
+-        stop_operations={op: (lambda aid, actor, rid, op=op: gateway.stop_operation(op, aid, actor, rid))
+-                         for op in ('STOP_STATUS', 'STOP_RESET')},
++        stop_operations=stop_operations,
+         policy=SocketPolicy(os.getuid(), args.ingress_gid, 0o710, 0o660))
+     stop = Event()
+     for number in (signal.SIGTERM, signal.SIGINT):
+--- a/auth/web_hmi/app.py
++++ b/auth/web_hmi/app.py
+@@ -43,6 +43,7 @@
+         PUBLIC_ORIGIN=os.environ.get('UGV_HMI_PUBLIC_ORIGIN', 'https://192.168.110.59'),
+         COOKIE_SECURE=True, IDLE_SECONDS=900, MAX_SESSION_SECONDS=28800,
+         ARM_BOOT_ID=os.environ.get('UGV_WEB_ARM_BOOT_ID'),
++        BENCH_RELEASE_BOOT_ID=os.environ.get('UGV_HMI_BENCH_RELEASE_BOOT_ID'),
+         DISARM_ENABLED=os.environ.get('UGV_HMI_ENABLE_DISARM') == '1',
+         DISARM_GATEWAY_SOCKET=os.environ.get('UGV_DISARM_GATEWAY_SOCKET', '/run/ugv-command/ingress.sock'),
+         DISARM_GATEWAY_UID=os.environ.get('UGV_DISARM_GATEWAY_UID'),
+@@ -64,11 +65,15 @@
+     bridge = TelemetryBridge()
+     from disarm_control.gateway import boot_arm_enabled
+     app.config['ARM_ENABLED'] = app.config['DISARM_ENABLED'] and boot_arm_enabled(app.config['ARM_BOOT_ID'])
++    bench_configured = bool(app.config['BENCH_RELEASE_BOOT_ID'])
++    bench_enabled = (boot_arm_enabled(app.config['BENCH_RELEASE_BOOT_ID']) and
++                     not app.config['DISARM_ENABLED'] and not app.config['ARM_BOOT_ID'])
+     from disarm_control.ipc import OwnerClient, SocketPolicy
+     from disarm_control.engine import UUID, finite
+     if disarm_client is not None:
+         disarm = disarm_client
+-    elif (app.config['ARM_ENABLED'] or app.config['DISARM_ENABLED'] or app.config['DISARM_GATEWAY_UID'] is not None or
++    elif (bench_enabled or app.config['ARM_ENABLED'] or app.config['DISARM_ENABLED'] or
++          app.config['DISARM_GATEWAY_UID'] is not None or
+           app.config['DISARM_FRONTEND_GID'] is not None):
+         gateway_uid = app.config['DISARM_GATEWAY_UID']
+         frontend_gid = app.config['DISARM_FRONTEND_GID']
+@@ -109,6 +114,7 @@
+         'pixhawk_arm': 'pixhawk.arm', 'pixhawk_arm_ready': 'pixhawk.arm',
+         'pixhawk_arm_status': 'pixhawk.arm',
+         'production_stop_status': 'status.view', 'production_stop_reset': 'stop.reset',
++        'bench_brake_release': 'stop.reset',
+         'pixhawk_disarm': 'pixhawk.disarm', 'pixhawk_disarm_status': 'pixhawk.disarm',
+     }
+ 
+@@ -261,7 +267,8 @@
+     def index():
+         return render_template('index.html', user=g.user, csrf=g.session['csrf'],
+                                disarm_enabled=app.config['DISARM_ENABLED'],
+-                               arm_enabled=app.config['ARM_ENABLED'])
++                               arm_enabled=app.config['ARM_ENABLED'],
++                               bench_configured=bench_configured)
+ 
+     @app.get('/audit')
+     def audit_page():
+@@ -409,10 +416,38 @@
+ 
+     @app.post('/api/production-stop/reset')
+     def production_stop_reset():
++        if bench_configured:
++            return jsonify(error='STOP_RESET_DISABLED_DURING_BENCH'), 409
+         body = request.get_json(silent=True)
+         if type(body) is not dict or set(body) != {'request_id'}:
+             return jsonify(error='ONLY_REQUEST_ID_ALLOWED'), 400
+         return stop_reply('STOP_RESET', body['request_id'])
++
++    @app.post('/api/bench-brakes/release')
++    def bench_brake_release():
++        if not bench_enabled:
++            return jsonify(error='BENCH_RELEASE_DISABLED'), 409
++        body = request.get_json(silent=True)
++        if type(body) is not dict or set(body) != {'request_id'}:
++            return jsonify(error='ONLY_REQUEST_ID_ALLOWED'), 400
++        request_id = body['request_id']
++        if type(request_id) is not str or not UUID.fullmatch(request_id):
++            return jsonify(error='INVALID_REQUEST_ID'), 400
++        event = store.audit(g.user, 'bench.brake.release', 'PENDING', request_id)
++        try:
++            reply = disarm.call('BENCH_RELEASE', g.user, request_id)
++            value = reply.get('command') if reply.get('ok') is True else None
++            if (type(value) is not dict or value.get('request_id') != request_id or
++                    type(value.get('bench_release_accepted')) is not bool or
++                    value.get('stop_latch') is not True or value.get('reset_available') is not False):
++                raise RuntimeError('INVALID_BENCH_RELEASE_RESPONSE')
++            accepted = value['bench_release_accepted']
++            store.finish_event(event, 'ACCEPTED' if accepted else 'DENIED')
++            return jsonify(request_id=request_id, bench_release_accepted=accepted,
++                           stop_latch=True, reset_available=False), 200 if accepted else 409
++        except Exception:
++            store.finish_event(event, 'UNKNOWN')
++            return jsonify(error='BENCH_RELEASE_UNCONFIRMED'), 503
+ 
+     @app.get('/api/telemetry')
+     def telemetry_status():
+--- a/auth/web_hmi/templates/index.html
++++ b/auth/web_hmi/templates/index.html
+@@ -1,7 +1,7 @@
+ <!doctype html>
+ <html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+-<meta name="csrf-token" content="{{ csrf }}"><title>UGV №1 — HMI v0.3</title><link rel="stylesheet" href="/static/style.css?v=pixhawk-actions-20261117"><script src="/static/account.js" defer></script><script src="/static/arm.js?v=gpio17-stop" defer></script><script src="/static/disarm.js?v=pixhawk-actions-20261117" defer></script><script src="/static/app.js?v=gpio17-stop-20261123" defer></script></head>
+-<body data-stop-reset="{{ 'yes' if can('stop.reset') else 'no' }}" data-control="{{ 'yes' if can('demo.control') else 'no' }}" data-status="{{ 'yes' if can('status.view') else 'no' }}" data-telemetry="{{ 'yes' if can('telemetry.view') else 'no' }}"><main>{% include 'account.html' %}<h1>UGV №1 <small>HMI v0.3</small></h1>
++<meta name="csrf-token" content="{{ csrf }}"><title>UGV №1 — HMI v0.3</title><link rel="stylesheet" href="/static/style.css?v=pixhawk-actions-20261117"><script src="/static/account.js" defer></script><script src="/static/arm.js?v=gpio17-stop" defer></script><script src="/static/disarm.js?v=pixhawk-actions-20261117" defer></script><script src="/static/app.js?v=gpio17-stop-20261123{% if bench_configured %}-bench{% endif %}" defer></script></head>
++<body data-bench-release="{{ 'yes' if bench_configured else 'no' }}" data-stop-reset="{{ 'yes' if can('stop.reset') else 'no' }}" data-control="{{ 'yes' if can('demo.control') else 'no' }}" data-status="{{ 'yes' if can('status.view') else 'no' }}" data-telemetry="{{ 'yes' if can('telemetry.view') else 'no' }}"><main>{% include 'account.html' %}<h1>UGV №1 <small>HMI v0.3</small></h1>
+ <aside><strong>DEMO · телеметрія Pixhawk · DISARM</strong><p>Фізичний E-STOP незалежний від Web HMI. Вебкнопка DISARM не замінює його.</p></aside>
+ <section><h2>Pixhawk 6C</h2>
+ <p>CONNECTION: <b id="connection">UNKNOWN</b></p>
+--- a/auth/web_hmi/static/app.js
++++ b/auth/web_hmi/static/app.js
+@@ -2,11 +2,14 @@
+ const el = id => document.getElementById(id);
+ let current = null, busy = false, online = false, confirmedRevision = null;
+ let stopStatus = null, resetBusy = false;
++const benchMode = document.body.dataset.benchRelease === 'yes';
+ function resetEnabled() {
+-  return document.body.dataset.stopReset === 'yes' && !resetBusy &&
+-    stopStatus?.reset_available === true && stopStatus?.stop_latch === true &&
+-    stopStatus?.physical_drive_interlocked === true &&
+-    performance.now() - stopStatus.receivedAt < 2000;
++  if (document.body.dataset.stopReset !== 'yes' || resetBusy || stopStatus?.stop_latch !== true ||
++      performance.now() - stopStatus.receivedAt >= 2000) return false;
++  return benchMode
++    ? stopStatus.bench_release_available === true && stopStatus.reset_available === false &&
++      stopStatus.physical_drive_interlocked === false
++    : stopStatus.reset_available === true && stopStatus.physical_drive_interlocked === true;
+ }
+ function render(s) {
+   current = s;
+@@ -73,7 +76,7 @@
+       FAULT: 'Гальма: помилка керування, тягу заблоковано'
+     }[stopStatus.brake_release];
+     el('production-stop-status').textContent =
+-      `FRONT: ${contact} · STOP_LATCH: ${latch} · Interlock: ${interlock}${brakes ? ' · ' + brakes : ''}`;
++      `${benchMode ? 'СТЕНДОВИЙ RELEASE · ' : ''}FRONT: ${contact} · STOP_LATCH: ${latch} · Interlock: ${interlock}${brakes ? ' · ' + brakes : ''}`;
+   } catch (_) {
+     stopStatus = null;
+     el('production-stop-status').textContent = 'Стан FRONT / STOP_LATCH недоступний.';
+@@ -87,24 +90,36 @@
+ }
+ el('reset').onclick = async () => {
+   if (!resetEnabled()) return;
++  if (benchMode && !window.confirm(
++    'Стендовий RELEASE до 3 с. Підтвердіть фізичне відключення обох VESC, нерухомість ровера на опорах і присутність оператора. STOP_LATCH залишиться активним.'
++  )) return;
+   el('confirm').close();
+   resetBusy = true;
+   stopStatus = null;
+   controls();
+   try {
+-    const response = await hmiFetch('/api/production-stop/reset', {
++    const path = benchMode ? '/api/bench-brakes/release' : '/api/production-stop/reset';
++    const response = await hmiFetch(path, {
+       method: 'POST',
+       headers: {'Content-Type': 'application/json'},
+       signal: AbortSignal.timeout(2000),
+       body: JSON.stringify({request_id: crypto.randomUUID()})
+     });
+     const result = await response.json();
++    if (benchMode) {
++      if (!response.ok || result.bench_release_accepted !== true || result.stop_latch !== true ||
++          result.reset_available !== false) throw new Error();
++      el('notice').textContent = 'Стендовий запит прийнято. STOP_LATCH активний. Перевірте PWM та обидва гальма.';
++      return;
++    }
+     if (!response.ok || result.reset_accepted !== true) throw new Error();
+     el('notice').textContent = result.brake_release
+       ? 'RESET прийнято. Перевірте фактичний стан гальм. Рух не запущено.'
+       : 'STOP_LATCH скинуто. Рух не запущено.';
+   } catch (_) {
+-    el('notice').textContent = 'RESET не підтверджено. Перевірте стан STOP_LATCH.';
++    el('notice').textContent = benchMode
++      ? 'Стендовий RELEASE не підтверджено. Припиніть тест без повторного запиту.'
++      : 'RESET не підтверджено. Перевірте стан STOP_LATCH.';
+   } finally {
+     await readStopStatus();
+     resetBusy = false;

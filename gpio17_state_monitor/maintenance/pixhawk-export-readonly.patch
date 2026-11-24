@@ -1,0 +1,160 @@
+--- a/owner/stop_latch_test/diagnostics.py
++++ b/owner/stop_latch_test/diagnostics.py
+@@ -16,12 +16,92 @@
+         'SERIAL5_PROTOCOL','SERIAL6_PROTOCOL','SERIAL7_PROTOCOL','SERIAL8_PROTOCOL')
+ 
+ 
++BRAKE_PARAMS = tuple(
++    f'SERVO{channel}_{field}'
++    for field in ('FUNCTION', 'MIN', 'MAX', 'TRIM', 'REVERSED')
++    for channel in range(1, 17)
++) + (
++    'RCMAP_ROLL', 'RCMAP_PITCH', 'RCMAP_THROTTLE', 'RCMAP_YAW',
++    'RC8_OPTION', 'RC8_MIN', 'RC8_MAX', 'RC8_TRIM', 'RC8_DZ', 'RC8_REVERSED',
++    'RC_OPTIONS', 'RC_PROTOCOLS', 'SERVO_RC_FS_MSK', 'SERVO_GPIO_MASK',
++    'BRD_SAFETY_DEFLT', 'BRD_SAFETYOPTION', 'BRD_SAFETY_MASK', 'BRD_IO_ENABLE',
++    'SERVO_RATE', 'SCR_ENABLE', 'FS_THR_ENABLE', 'FS_THR_VALUE', 'FS_TIMEOUT',
++    'FS_ACTION', 'FS_OPTIONS', 'FS_GCS_ENABLE', 'FS_GCS_TIMEOUT', 'FS_EKF_ACTION',
++    'FS_EKF_THRESH', 'FS_CRASH_CHECK',
++)
++
++
+ class Diagnostics:
+-    def __init__(self,reader,encoder,query=False,write=os.write):
++    def __init__(self,reader,encoder,query=False,write=os.write,*,brake_query=False,export_params=False):
+         self.reader,self.encoder,self.query,self.write=reader,encoder,query,write
+         self.texts=deque(maxlen=100);self.rc=None;self.sys=None;self.params={}
+         self.overrides=deque(maxlen=20)
+-        self.queue=deque(PARAMS if query else ());self.attempted=[];self.last_query=None;self.fault=False
++        self.requested = tuple(dict.fromkeys((PARAMS if query else ()) +
++                                             (BRAKE_PARAMS if brake_query else ())))
++        self.queue = deque(self.requested)
++        self.attempted=[];self.last_query=None;self.fault=False
++        self.export_state = 'WAITING' if export_params else 'DISABLED'
++        self.export_deadline = None
++        self.export_rows = {}
++        self.export_names = {}
++        self.export_count = None
++
++    def _export_observe(self, msg, now):
++        if self.export_state != 'READING':
++            return
++        if now >= self.export_deadline:
++            self.export_state = 'INCOMPLETE'
++            return
++        count, index = msg.param_count, msg.param_index
++        name, value = str(msg.param_id), float(msg.param_value)
++        if index == 65535:
++            return  # An unsolicited parameter outside the indexed list.
++        if (not 0 <= index < count <= 8192 or not 1 <= len(name) <= 16 or
++                not name.isascii() or not math.isfinite(value) or msg.param_type not in (
++                    mav.MAV_PARAM_TYPE_INT8, mav.MAV_PARAM_TYPE_INT16, mav.MAV_PARAM_TYPE_INT32,
++                    mav.MAV_PARAM_TYPE_REAL32) or
++                self.export_count not in (None, count)):
++            self.export_state = 'INVALID'
++            return
++        row = {'name': name, 'value': value, 'type': msg.param_type}
++        if self.export_rows.get(index, row) != row or self.export_names.get(name, index) != index:
++            self.export_state = 'INVALID'
++            return
++        self.export_count = count
++        self.export_rows[index] = row
++        self.export_names[name] = index
++        if len(self.export_rows) == count:
++            self.export_state = 'COMPLETE'
++
++    def _export_tick(self, fd, command_pending):
++        if self.export_state not in ('WAITING', 'READING'):
++            return
++        now = self.reader.clock()
++        hb = self.reader.messages.get('HEARTBEAT')
++        ready = (not command_pending and self.reader.state == 'READING' and
++                 self.reader.source == (1, 1) and hb is not None and
++                 0 <= now - hb[0] < 1 and not hb[1].base_mode & 128)
++        if self.export_state == 'READING':
++            if not ready or now >= self.export_deadline:
++                self.export_state = 'INCOMPLETE'
++            return
++        if ready:
++            packet = mav.MAVLink_param_request_list_message(1, 1).pack(self.encoder)
++            try:
++                if self.write(fd, packet) != len(packet):
++                    raise OSError('Partial parameter-list request')
++                self.encoder.seq = (self.encoder.seq + 1) % 256
++                self.export_state = 'READING'
++                self.export_deadline = now + 180
++            except OSError:
++                self.export_state = 'IO_ERROR'
++
++    def export_snapshot(self):
++        with self.reader.lock:
++            return {'state': self.export_state, 'received': len(self.export_rows),
++                    'expected': self.export_count,
++                    'parameters': [self.export_rows[i] for i in sorted(self.export_rows)]
++                    if self.export_state == 'COMPLETE' else []}
+ 
+     def observe(self,msg):
+         k=msg.get_type();now=self.reader.clock()
+@@ -30,17 +110,23 @@
+             if k in ('RC_CHANNELS_OVERRIDE','MANUAL_CONTROL'):
+                 self.overrides.append(dict(type=k,source=[msg.get_srcSystem(),msg.get_srcComponent()],at=now))
+             if (msg.get_srcSystem(),msg.get_srcComponent())!=(1,1):return
++            if k == 'PARAM_VALUE':
++                self._export_observe(msg, now)
+             if k=='STATUSTEXT':self.texts.append(dict(at=now,severity=int(msg.severity),text=str(msg.text)))
+             elif k=='RC_CHANNELS':
+                 self.rc=dict(at=now,channels={str(i):int(getattr(msg,f'chan{i}_raw')) for i in range(1,min(18,msg.chancount)+1)},rssi=int(msg.rssi),time_boot_ms=int(msg.time_boot_ms))
+             elif k=='SYS_STATUS':
+                 self.sys=dict(at=now,present=int(msg.onboard_control_sensors_present),enabled=int(msg.onboard_control_sensors_enabled),health=int(msg.onboard_control_sensors_health))
+-            elif k=='PARAM_VALUE' and str(msg.param_id) in PARAMS:
++            elif k=='PARAM_VALUE' and (str(msg.param_id) in PARAMS or
++                                      (str(msg.param_id) in BRAKE_PARAMS and str(msg.param_id) in self.attempted)):
+                 value=float(msg.param_value)
+                 if math.isfinite(value):self.params[str(msg.param_id)]=dict(value=value,at=now)
+ 
+     def tick(self,fd,command_pending=False):
+         with self.reader.lock:
++            if self.export_state != 'DISABLED':
++                self._export_tick(fd, command_pending)
++                return
+             if not self.queue or self.fault or command_pending:return
+             now=self.reader.clock();hb=self.reader.messages.get('HEARTBEAT')
+             if self.reader.state!='READING' or hb is None or not 0<=now-hb[0]<1:return
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -24,6 +24,7 @@
+     parser.add_argument('--externalnav-bench-profile',
+                         help='Measured ID24 6DoF profile; OBSERVE_ONLY, never TX')
+     parser.add_argument('--diagnostic-params',action='store_true')
++    parser.add_argument('--export-pixhawk-params', action='store_true')
+     parser.add_argument('--enable-bench-hold', action='store_true',
+                         help='Maintenance only; legacy HTTP mutations remain disabled')
+     parser.add_argument('--web-disarm-socket', help='Explicit opt-in; private Unix socket path')
+@@ -32,6 +33,8 @@
+     parser.add_argument('--web-disarm-client-gid', type=int, help='Private backend client GID')
+     parser.add_argument('--inhibit-file', default='/run/ugv-disarm-policy/inhibit')
+     args = parser.parse_args(argv)
++    if args.export_pixhawk_params and (not args.web_disarm_socket or args.enable_bench_hold or args.diagnostic_params):
++        parser.error('Parameter export requires the sole owner and a dedicated diagnostic profile')
+     if args.externalnav_bench_profile and not args.externalnav_observe_only:
+         parser.error('Bench geometry requires --externalnav-observe-only and forbids TX')
+     if bool(args.web_disarm_socket) != bool(args.web_disarm_db):
+@@ -61,7 +64,7 @@
+     if encoder is None:
+         from pymavlink.dialects.v20 import ardupilotmega as mav
+         encoder=mav.MAVLink(None,srcSystem=255,srcComponent=190)
+-    diagnostics=Diagnostics(reader,encoder,query=args.diagnostic_params)
++    diagnostics=Diagnostics(reader,encoder,query=args.diagnostic_params, export_params=args.export_pixhawk_params)
+     nav=None
+     if args.externalnav_observe_only or args.externalnav_tx:
+         from stop_latch_test.externalnav import ExternalNav
+@@ -108,6 +111,9 @@
+     page_app=create_app(bench,hold=True)
+     from flask import jsonify
+     page_app.add_url_rule('/api/owner-diagnostics','owner_diagnostics',lambda:jsonify(diagnostics.snapshot()),methods=['GET'])
++    if args.export_pixhawk_params:
++        page_app.add_url_rule('/api/pixhawk-params-export', 'parameter_export',
++                              lambda: jsonify(diagnostics.export_snapshot()), methods=['GET'])
+     if nav is not None:
+         page_app.add_url_rule('/api/externalnav','externalnav',lambda:jsonify(nav.snapshot()),methods=['GET'])
+         nav.start()

@@ -1,0 +1,5 @@
+[Service]
+WorkingDirectory=/opt/ugv-hold-only-reconnect/package/owner
+Environment=PYTHONPATH=/opt/ugv-hold-only-reconnect/package/owner:/opt/ugv-hold-only-reconnect/package/optical:/opt/ugv-hold-only-reconnect/package
+ExecStart=
+ExecStart=/opt/ugv-disarm/venv-owner/bin/python -u -m stop_latch_test.hold_runner --journal /home/ugvs2/.local/state/ugv-hmi/hold-bench.jsonl --web-disarm-socket /run/ugv-pixhawk-control/backend.sock --web-disarm-db /var/lib/ugv-pixhawk/disarm.sqlite3 --web-disarm-client-uid ${UGV_GATEWAY_UID} --web-disarm-client-gid ${UGV_OWNER_RPC_GID} --inhibit-file /run/ugv-disarm-policy/inhibit --externalnav-observe-only --observe-brake-pwm --functional-brake-boot-id __CURRENT_PI_BOOT_ID__ --brake-hold-only

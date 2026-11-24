@@ -1,0 +1,17 @@
+{
+  "frontend_gateway": {
+    "auth/web_hmi/access_control.py": "f81f18d3fc8ad9ffb3159f86a1b7113ad98d42e746e36893bb37e9e9c1d9e830",
+    "auth/web_hmi/app.py": "0f52b9b96e3423e3af63f4886a7acb37271e6d8a16ce7302bf24887e1290a324",
+    "auth/web_hmi/templates/index.html": "80b6d0cb01b5edb2141ed51400d0ce8e424e82bd26e0e2ece375060f85c82574",
+    "auth/web_hmi/static/app.js": "640c85a841cb97a24d138cca7f5a11b42c26175e204bac13afa464f55aea14bf",
+    "disarm_control/gateway.py": "6a9c3ec4316c20a5dede693e595fc5e8b1706dd48186d630eec0b52d9b44f95f",
+    "disarm_control/ipc.py": "728901bfb25b1eb9dd55cc8da31775db19e63f734200cfd20a71b1b2ec8774b3"
+  },
+  "owner_externalnav": {
+    "disarm_control/ipc.py": "728901bfb25b1eb9dd55cc8da31775db19e63f734200cfd20a71b1b2ec8774b3",
+    "owner/stop_latch_test/hold_runner.py": "610046840d7c78f14d73828a802b7265a384558efc8fab2544cca5874989b736",
+    "owner/stop_latch_test/stop_latch.py": "68771f586e12087c4b879728d2a16511cda1b6a4e2821c2c5bc2f158b7809df0",
+    "owner/stop_latch_test/diagnostics.py": "6d81792f95d7048fc2d6f58fbe8ecce0534f559b5942f3de0e3821520afe9833",
+    "owner/web_hmi/pixhawk_telemetry.py": "2a3e89f48243b74b7b20b74dd1a2fe800b7b6c707b4b31495c7d2ae888f6f710"
+  }
+}

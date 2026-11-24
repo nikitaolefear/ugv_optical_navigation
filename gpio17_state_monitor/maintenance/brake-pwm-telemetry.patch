@@ -1,0 +1,160 @@
+--- a/owner/stop_latch_test/diagnostics.py
++++ b/owner/stop_latch_test/diagnostics.py
+@@ -2,6 +2,7 @@
+ from collections import deque
+ import math
+ import os
++import time
+ from pymavlink.dialects.v20 import ardupilotmega as mav
+ 
+ def _finite(value):
+@@ -17,11 +18,83 @@
+ 
+ 
+ class Diagnostics:
+-    def __init__(self,reader,encoder,query=False,write=os.write):
++    def __init__(self,reader,encoder,query=False,write=os.write, *, pwm_observe=False, pwm_interval=None):
+         self.reader,self.encoder,self.query,self.write=reader,encoder,query,write
+         self.texts=deque(maxlen=100);self.rc=None;self.sys=None;self.params={}
+         self.overrides=deque(maxlen=20)
+-        self.queue=deque(PARAMS if query else ());self.attempted=[];self.last_query=None;self.fault=False
++        self.queue=deque(PARAMS if query else ())
++        self.attempted=[];self.last_query=None;self.fault=False
++        self.pwm_observe = pwm_observe
++        self.pwm_interval = pwm_interval
++        self.servo_pwm = None
++        self.pwm_probe_started = None
++        self.pwm_request_state = 'WAITING' if pwm_interval is not None else 'DISABLED'
++
++    def _observe_pwm(self, kind, msg, now):
++        if not self.pwm_observe or self.reader.source != (1, 1):
++            return
++        if kind == 'SERVO_OUTPUT_RAW' and msg.port == 0:
++            self.servo_pwm = {
++                'at': now, 'received_unix_s': time.time(), 'port': 0,
++                'servo5_raw_us': msg.servo5_raw, 'servo6_raw_us': msg.servo6_raw,
++            }
++        elif (kind == 'COMMAND_ACK' and self.pwm_request_state == 'SENT' and
++              msg.command == mav.MAV_CMD_SET_MESSAGE_INTERVAL and
++              (msg.target_system, msg.target_component) in ((0, 0), (255, 190))):
++            self.pwm_request_state = 'ACK_ACCEPTED' if msg.result == mav.MAV_RESULT_ACCEPTED else 'ACK_REJECTED'
++
++    def _tick_pwm(self, fd, command_pending):
++        if self.pwm_request_state != 'WAITING':
++            return
++        now = self.reader.clock()
++        heartbeat = self.reader.messages.get('HEARTBEAT')
++        if (command_pending or self.reader.state != 'READING' or self.reader.source != (1, 1) or
++                heartbeat is None or not 0 <= now - heartbeat[0] < 1.5 or heartbeat[1].base_mode & 128):
++            self.pwm_probe_started = None
++            return
++        if self.pwm_interval == 500000:
++            if self.pwm_probe_started is None:
++                self.pwm_probe_started = now
++            if self.servo_pwm is not None and 0 <= now - self.servo_pwm['at'] < 3:
++                self.pwm_request_state = 'PASSIVE_DATA_PRESENT'
++                return
++            if now - self.pwm_probe_started < 5:
++                return
++        packet = mav.MAVLink_command_long_message(
++            1, 1, mav.MAV_CMD_SET_MESSAGE_INTERVAL, 0,
++            mav.MAVLINK_MSG_ID_SERVO_OUTPUT_RAW, self.pwm_interval, 0, 0, 0, 0, 0,
++        ).pack(self.encoder)
++        try:
++            if self.write(fd, packet) != len(packet):
++                raise OSError('Partial telemetry interval request')
++            self.encoder.seq = (self.encoder.seq + 1) % 256
++            self.pwm_request_state = 'SENT'
++        except OSError:
++            self.pwm_request_state = 'IO_ERROR'
++
++    def _pwm_snapshot(self, aged):
++        servo = aged(self.servo_pwm)
++        rc = aged(self.rc)
++        rc8 = rc['channels'].get('8') if rc is not None else None
++        current = self.reader.state == 'READING' and self.reader.source == (1, 1)
++
++        def fresh(row):
++            return current and row is not None and _finite(row['age_s']) and 0 <= row['age_s'] < 3
++
++        rc_fresh, servo_fresh = fresh(rc), fresh(servo)
++        return {
++            'source': 'PIXHAWK_REPORTED_PWM',
++            'rc_state': 'FRESH' if rc_fresh else 'STALE' if rc else 'NOT_RECEIVED',
++            'servo_state': 'FRESH' if servo_fresh else 'STALE' if servo else 'NOT_RECEIVED',
++            'rc8_us': rc8 if rc_fresh and type(rc8) is int and 800 <= rc8 <= 2200 else None,
++            'rc_received_unix_s': rc.get('received_unix_s') if rc else None,
++            'rc_age_s': rc.get('age_s') if rc else None,
++            'servo5_raw_us': servo['servo5_raw_us'] if servo_fresh else None,
++            'servo6_raw_us': servo['servo6_raw_us'] if servo_fresh else None,
++            'servo_received_unix_s': servo.get('received_unix_s') if servo else None,
++            'servo_age_s': servo.get('age_s') if servo else None,
++            'interval_request': self.pwm_request_state,
++        }
+ 
+     def observe(self,msg):
+         k=msg.get_type();now=self.reader.clock()
+@@ -30,9 +103,12 @@
+             if k in ('RC_CHANNELS_OVERRIDE','MANUAL_CONTROL'):
+                 self.overrides.append(dict(type=k,source=[msg.get_srcSystem(),msg.get_srcComponent()],at=now))
+             if (msg.get_srcSystem(),msg.get_srcComponent())!=(1,1):return
++            self._observe_pwm(k, msg, now)
+             if k=='STATUSTEXT':self.texts.append(dict(at=now,severity=int(msg.severity),text=str(msg.text)))
+             elif k=='RC_CHANNELS':
+                 self.rc=dict(at=now,channels={str(i):int(getattr(msg,f'chan{i}_raw')) for i in range(1,min(18,msg.chancount)+1)},rssi=int(msg.rssi),time_boot_ms=int(msg.time_boot_ms))
++                if self.pwm_observe:
++                    self.rc['received_unix_s'] = time.time()
+             elif k=='SYS_STATUS':
+                 self.sys=dict(at=now,present=int(msg.onboard_control_sensors_present),enabled=int(msg.onboard_control_sensors_enabled),health=int(msg.onboard_control_sensors_health))
+             elif k=='PARAM_VALUE' and str(msg.param_id) in PARAMS:
+@@ -41,6 +117,7 @@
+ 
+     def tick(self,fd,command_pending=False):
+         with self.reader.lock:
++            self._tick_pwm(fd, command_pending)
+             if not self.queue or self.fault or command_pending:return
+             now=self.reader.clock();hb=self.reader.messages.get('HEARTBEAT')
+             if self.reader.state!='READING' or hb is None or not 0<=now-hb[0]<1:return
+@@ -140,8 +217,12 @@
+                 at=row.get('at')
+                 age=now-at if _finite(now) and _finite(at) else None
+                 return dict(row,age_s=age if _finite(age) else None)
+-            return dict(attitude=self._attitude(now),rc=aged(self.rc),sys_status=aged(self.sys),statustext=[aged(x) for x in self.texts],
++            result = dict(attitude=self._attitude(now),rc=aged(self.rc),sys_status=aged(self.sys),statustext=[aged(x) for x in self.texts],
+                         parameters={k:aged(v) for k,v in self.params.items()},
+                         diagnostic_requests_attempted=list(self.attempted),query_fault=self.fault,
+                         echoed_override_messages=[aged(x) for x in self.overrides],
+                         absence_of_echo_does_not_prove_no_override=True)
++
++            if self.pwm_observe:
++                result['brake_pwm'] = self._pwm_snapshot(aged)
++            return result
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -31,7 +31,15 @@
+     parser.add_argument('--web-disarm-client-uid', type=int, help='Dedicated gateway UID')
+     parser.add_argument('--web-disarm-client-gid', type=int, help='Private backend client GID')
+     parser.add_argument('--inhibit-file', default='/run/ugv-disarm-policy/inhibit')
++    pwm = parser.add_mutually_exclusive_group()
++    pwm.add_argument('--observe-brake-pwm', action='store_true')
++    pwm.add_argument('--brake-pwm-interval-us', type=int, choices=(500000, 0, -1),
++                     help='Observe outputs and opt into one telemetry-only interval request')
+     args = parser.parse_args(argv)
++    pwm_enabled = args.observe_brake_pwm or args.brake_pwm_interval_us is not None
++    if pwm_enabled and (not args.web_disarm_socket or not args.externalnav_observe_only
++                        or args.enable_bench_hold or args.diagnostic_params):
++        parser.error('PWM observation requires the sole owner in a dedicated diagnostic profile')
+     if args.externalnav_bench_profile and not args.externalnav_observe_only:
+         parser.error('Bench geometry requires --externalnav-observe-only and forbids TX')
+     if bool(args.web_disarm_socket) != bool(args.web_disarm_db):
+@@ -61,7 +69,9 @@
+     if encoder is None:
+         from pymavlink.dialects.v20 import ardupilotmega as mav
+         encoder=mav.MAVLink(None,srcSystem=255,srcComponent=190)
+-    diagnostics=Diagnostics(reader,encoder,query=args.diagnostic_params)
++    diagnostics=Diagnostics(reader,encoder,query=args.diagnostic_params,
++                            pwm_observe=(args.observe_brake_pwm or args.brake_pwm_interval_us is not None),
++                            pwm_interval=args.brake_pwm_interval_us)
+     nav=None
+     if args.externalnav_observe_only or args.externalnav_tx:
+         from stop_latch_test.externalnav import ExternalNav

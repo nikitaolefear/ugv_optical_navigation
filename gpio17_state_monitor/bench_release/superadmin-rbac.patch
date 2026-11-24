@@ -1,0 +1,52 @@
+--- a/auth/web_hmi/auth.py
++++ b/auth/web_hmi/auth.py
+@@ -273,6 +273,8 @@
+         row = db.execute('SELECT name,rank FROM roles WHERE name=?', (name,)).fetchone()
+         if row is None:
+             raise AccountError('Невідома роль.')
++        if name == 'superadmin':
++            return dict(row, permissions=sorted(PERMISSIONS))
+         return dict(row, permissions=[r[0] for r in db.execute(
+             'SELECT permission FROM role_permissions WHERE role=? ORDER BY permission', (name,))])
+ 
+@@ -404,8 +406,8 @@
+                     or len(set(permissions)) != len(permissions)):
+                 raise AccountError('Невідомі або повторні дозволи.')
+             if name == 'superadmin':
+-                if not {'users.manage', 'roles.manage'} <= set(permissions):
+-                    raise AccessDenied('Суперадмін має зберігати дозволи керування користувачами й ролями.')
++                if rank != 1000 or set(permissions) != set(PERMISSIONS):
++                    raise AccessDenied('Суперадмін має фіксований ранг 1000 і всі зареєстровані дозволи.')
+                 highest = db.execute("SELECT max(rank) FROM roles WHERE name!='superadmin'").fetchone()[0] or 0
+                 if rank <= highest:
+                     raise AccessDenied('Ранг superadmin має залишатися вищим за всі інші ролі.')
+--- a/auth/web_hmi/test_access.py
++++ b/auth/web_hmi/test_access.py
+@@ -279,15 +279,18 @@
+             after=tuple(db.execute("SELECT role,active,password_hash FROM users WHERE username='viewer'").fetchone())
+         self.assertEqual(after,before)
+ 
+-    def test_superadmin_can_edit_own_role_without_losing_management_or_top_rank(self):
+-        self.assertEqual(self.role('superadmin','edit',chief=True,rank=200,permissions=list(PERMISSIONS)).status_code,403)
+-        self.assertEqual(self.role('superadmin','edit',chief=True,rank=900,
+-                         permissions=['users.manage','roles.manage']).status_code,200)
+-        self.assertEqual(self.chief.get('/api/status').status_code,401)
+-        self.chief,self.chief_csrf=self.login('chief')
+-        self.assertEqual(self.chief.get('/api/status').status_code,403)
+-        self.assertEqual(self.chief.get('/access').status_code,200)
+-        self.assertEqual(self.post('/api/admin/roles',dict(name='too_high',rank=950,permissions=[]),chief=True).status_code,403)
++    def test_superadmin_cannot_reduce_own_rank_or_permissions(self):
++        for rank, permissions in ((900, list(PERMISSIONS)),
++                                  (1000, ['users.manage', 'roles.manage'])):
++            response = self.role('superadmin', 'edit', chief=True,
++                                 rank=rank, permissions=permissions)
++            self.assertEqual(response.status_code, 403)
++        user = self.chief.get('/api/session').json['user']
++        self.assertEqual(user['rank'], 1000)
++        self.assertEqual(user['permissions'], sorted(PERMISSIONS))
++        response = self.post('/api/admin/roles', dict(name='same_rank', rank=1000, permissions=[]),
++                             chief=True)
++        self.assertEqual(response.status_code, 403)
+ 
+     def test_unclassified_api_is_denied_even_for_superadmin(self):
+         app=self.env.app()

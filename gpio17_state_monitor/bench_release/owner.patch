@@ -1,0 +1,109 @@
+--- a/production_stop/brake_link.py
++++ b/production_stop/brake_link.py
+@@ -7,6 +7,7 @@
+ 
+ class BrakeLink:
+     HOLD, KEEP, RELEASE = range(3)
++    wire_name = b'UGVBRAKE03'
+ 
+     def __init__(self, reader, disarm, stop, encoder, rc_snapshot, write=os.write, *, hold_only=False):
+         self.reader, self.disarm, self.stop = reader, disarm, stop
+@@ -84,6 +85,12 @@
+             return self.HOLD
+         return self.RELEASE if self.last_sent is not None and self.last_state == self.HOLD else self.HOLD
+ 
++    def _release_sent(self):
++        self.stop.record_brake_result('BRAKE_RELEASE_REQUEST_SENT', self.request_id,
++                                      'PHYSICAL_POSITION_UNCONFIRMED')
++        if not self.stop.storage_fault and not self.stop.core.snapshot().stop_latch:
++            self.phase = 'SENT'
++
+     def tick(self, fd):
+         from pymavlink.dialects.v20 import ardupilotmega as mav
+ 
+@@ -96,16 +103,13 @@
+                 if self.last_sent is not None and state == self.last_state and now - self.last_sent < .1:
+                     return
+                 packet = mav.MAVLink_named_value_int_message(
+-                    int(now * 1000) & 0xffffffff, b'UGVBRAKE03', state).pack(self.encoder)
++                    int(now * 1000) & 0xffffffff, self.wire_name, state).pack(self.encoder)
+                 if self.write(fd, packet) != len(packet):
+                     raise OSError('Partial brake gate write')
+                 self.encoder.seq = (self.encoder.seq + 1) % 256
+                 self.last_sent, self.last_state = now, state
+                 if state == self.RELEASE:
+-                    self.stop.record_brake_result('BRAKE_RELEASE_REQUEST_SENT', self.request_id,
+-                                                  'PHYSICAL_POSITION_UNCONFIRMED')
+-                    if not self.stop.storage_fault and not self.stop.core.snapshot().stop_latch:
+-                        self.phase = 'SENT'
++                    self._release_sent()
+             except Rejected:
+                 if self.phase in ('PENDING', 'SENT'):
+                     self._fail('BRAKE_LINK_LOST')
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -37,6 +37,8 @@
+     parser.add_argument('--functional-brake-boot-id', help='Bench-approved functional brake lease for this boot')
+     parser.add_argument('--brake-hold-only', action='store_true',
+                         help='Bench GPIO17 verification with HOLD as the only brake message')
++    parser.add_argument('--isolated-brake-cycle', choices=('VESC_ISOLATED_OPERATOR_PRESENT',),
++                        help='One isolated brake cycle after operator confirms physical conditions')
+     pwm = parser.add_mutually_exclusive_group()
+     pwm.add_argument('--observe-brake-pwm', action='store_true')
+     pwm.add_argument('--brake-pwm-interval-us', type=int, choices=(500000, 0, -1),
+@@ -56,6 +58,8 @@
+         parser.error('Functional brakes allow only passive PWM observation')
+     if args.functional_brake_boot_id and (args.web_arm_boot_id or args.externalnav_tx):
+         parser.error('Functional brake bench excludes Web ARM and ExternalNav TX')
++    if args.isolated_brake_cycle and not args.brake_hold_only:
++        parser.error('Isolated brake cycle requires the HOLD-only RPC profile')
+     if args.brake_hold_only and not (args.functional_brake_boot_id and
+                                      args.observe_brake_pwm and args.externalnav_observe_only):
+         parser.error('Brake HOLD-only requires the functional owner and passive observations')
+@@ -112,6 +116,7 @@
+     reader.bench_tick = bench.tick
+     production = None
+     arm = None
++    gpio_observer = None
+     if args.web_disarm_socket:
+         from disarm_control.engine import DisarmEngine, disarm_sender
+         from disarm_control.ipc import OwnerServer, SocketPolicy
+@@ -133,6 +138,7 @@
+         production = OwnerProductionStop(reader, bench, args.web_disarm_db + '.stop-reset.sqlite3',
+                                          native=native)
+         atexit.register(production.close)
++        gpio_observer = production.gpio_observed
+ 
+         from pathlib import Path
+         from production_stop.web_arm import WebArm, arm_sender
+@@ -141,8 +147,19 @@
+             from production_stop.brake_link import BrakeLink
+             try:
+                 if args.functional_brake_boot_id == Path('/proc/sys/kernel/random/boot_id').read_text().strip():
+-                    brake = BrakeLink(reader, control, production, encoder,
+-                                      lambda: diagnostics.rc, hold_only=args.brake_hold_only)
++                    if args.isolated_brake_cycle:
++                        from production_stop.bench_brake_link import BenchBrakeLink
++                        brake = BenchBrakeLink(reader, control, production, encoder,
++                            lambda: diagnostics.rc,
++                            inhibited=lambda: os.path.isfile(args.inhibit_file))
++
++                        def gpio_observer(contact, observed_at):
++                            with reader.lock:
++                                brake.observe_front(contact, observed_at)
++                                production.gpio_observed(contact, observed_at)
++                    else:
++                        brake = BrakeLink(reader, control, production, encoder,
++                                          lambda: diagnostics.rc, hold_only=args.brake_hold_only)
+                     production.brake = brake
+                 elif args.brake_hold_only:
+                     raise RuntimeError('Brake HOLD-only requires the current Pi boot id')
+@@ -198,7 +215,7 @@
+         atexit.register(channel.close)
+     stop = threading.Event()
+     gpio = threading.Thread(target=monitor, args=(bench, stop),
+-                            kwargs={'observer': production.gpio_observed if production else None},
++                            kwargs={'observer': gpio_observer},
+                             daemon=True)
+     page_app=create_app(bench,hold=True)
+     from flask import jsonify

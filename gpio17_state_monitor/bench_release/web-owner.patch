@@ -1,0 +1,134 @@
+--- a/production_stop/bench_brake_link.py
++++ b/production_stop/bench_brake_link.py
+@@ -59,29 +59,39 @@
+             return 'RELEASE'
+         return 'BETWEEN'
+ 
+-    def _state(self, now, hb):
++    def _inputs_available(self, now, hb):
+         if self.phase == 'BENCH_FINISHED':
+-            return self.HOLD
++            return None
+         if (hb.base_mode & 128 or not self.inhibited() or self.stop.storage_fault or
+                 not self.stop.committed_latch or not self.stop.core.snapshot().stop_latch or
+                 self.stop.bench.disarm_pending()):
+             self._finish('BENCH_PRECONDITION_LOST')
+-            return self.HOLD
++            return None
+         deadline = self.release_deadline if self.release_deadline is not None else self.setup_deadline
+         if now >= deadline:
+             self._finish('BENCH_WINDOW_EXPIRED')
+-            return self.HOLD
++            return None
+         position = self._rc_position(now)
+         if self.front_at is None or not 0 <= now - self.front_at < .5 or position is None:
+             if self.phase != 'BENCH_WAIT_APPLY':
+                 self._finish('BENCH_INPUT_STALE')
++            return None
++        return position
++
++    def _release_requested(self, now, position):
++        return True
++
++    def _state(self, now, hb):
++        position = self._inputs_available(now, hb)
++        if position is None:
+             return self.HOLD
+         if self.phase == 'BENCH_WAIT_APPLY':
+             if position == 'APPLY':
+                 self.phase = 'BENCH_READY'
+             return self.HOLD
+         if self.phase == 'BENCH_READY':
+-            if position == 'RELEASE' and self.last_state == self.HOLD and self.last_sent is not None:
++            if (self._release_requested(now, position) and position == 'RELEASE' and
++                    self.last_state == self.HOLD and self.last_sent is not None):
+                 self.phase = 'BENCH_RELEASE'
+                 self.release_deadline = now + self.release_s
+                 return self.RELEASE
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -39,6 +39,8 @@
+                         help='Bench GPIO17 verification with HOLD as the only brake message')
+     parser.add_argument('--isolated-brake-cycle', choices=('VESC_ISOLATED_OPERATOR_PRESENT',),
+                         help='One isolated brake cycle after operator confirms physical conditions')
++    parser.add_argument('--bench-web-release-boot-id', help='Explicit one-shot Web bench opt-in')
++    parser.add_argument('--bench-web-operator-id', type=int, help='Authenticated user ID for the single bench cycle')
+     pwm = parser.add_mutually_exclusive_group()
+     pwm.add_argument('--observe-brake-pwm', action='store_true')
+     pwm.add_argument('--brake-pwm-interval-us', type=int, choices=(500000, 0, -1),
+@@ -58,6 +60,15 @@
+         parser.error('Functional brakes allow only passive PWM observation')
+     if args.functional_brake_boot_id and (args.web_arm_boot_id or args.externalnav_tx):
+         parser.error('Functional brake bench excludes Web ARM and ExternalNav TX')
++    if args.bench_web_release_boot_id and (not args.isolated_brake_cycle or
++                                           args.bench_web_release_boot_id != args.functional_brake_boot_id):
++        parser.error('Web bench release requires the isolated profile and matching boot IDs')
++    if args.bench_web_release_boot_id and (args.bench_web_operator_id is None or args.bench_web_operator_id <= 0):
++        parser.error('Web bench release requires one explicit operator ID')
++    if args.bench_web_operator_id is not None and not args.bench_web_release_boot_id:
++        parser.error('Bench operator ID requires Web bench release')
++    if args.isolated_brake_cycle and not args.bench_web_release_boot_id:
++        parser.error('This bench build requires explicit Web authorization')
+     if args.isolated_brake_cycle and not args.brake_hold_only:
+         parser.error('Isolated brake cycle requires the HOLD-only RPC profile')
+     if args.brake_hold_only and not (args.functional_brake_boot_id and
+@@ -83,6 +94,8 @@
+ 
+ def main(*, interlock_io=None):
+     args = parse_args()
++    if args.bench_web_release_boot_id and interlock_io is not None:
++        raise RuntimeError('Web bench release is separate from native InterlockIO')
+     if args.brake_hold_only and not os.path.isfile(args.inhibit_file):
+         raise RuntimeError('Brake HOLD-only requires the DISARM inhibit marker')
+     reader = PixhawkTelemetry(opener=partial(open_with_owner_helper,
+@@ -148,10 +161,10 @@
+             try:
+                 if args.functional_brake_boot_id == Path('/proc/sys/kernel/random/boot_id').read_text().strip():
+                     if args.isolated_brake_cycle:
+-                        from production_stop.bench_brake_link import BenchBrakeLink
+-                        brake = BenchBrakeLink(reader, control, production, encoder,
+-                            lambda: diagnostics.rc,
+-                            inhibited=lambda: os.path.isfile(args.inhibit_file))
++                        from production_stop.web_bench_brake_link import WebBenchBrakeLink
++                        brake = WebBenchBrakeLink(reader, control, production, encoder, lambda: diagnostics.rc,
++                            inhibited=lambda: os.path.isfile(args.inhibit_file),
++                            operator_id=args.bench_web_operator_id)
+ 
+                         def gpio_observer(contact, observed_at):
+                             with reader.lock:
+@@ -202,7 +215,14 @@
+ 
+         reader.bench_tick = owner_tick
+         stop_operations = {'STOP_STATUS': production.status}
+-        if not args.brake_hold_only:
++        if args.bench_web_release_boot_id:
++            def bench_stop_status(actor_id, actor, request_id):
++                with reader.lock:
++                    return dict(production.status(actor_id, actor, request_id),
++                                bench_release_available=brake.release_available(actor_id))
++            stop_operations = {'STOP_STATUS': bench_stop_status,
++                               'BENCH_RELEASE': brake.request_web_release}
++        elif not args.brake_hold_only:
+             stop_operations['STOP_RESET'] = production.reset
+         channel = OwnerServer(guarded, args.web_disarm_socket,
+             stop_operations=stop_operations,
+@@ -225,7 +245,7 @@
+                               lambda: jsonify(diagnostics.export_snapshot()), methods=['GET'])
+     if production is not None:
+         page_app.add_url_rule('/api/production-stop', 'production_stop',
+-            lambda: jsonify(production.status(0, 'diagnostic', '')), methods=['GET'])
++            lambda: jsonify(stop_operations['STOP_STATUS'](0, 'diagnostic', '')), methods=['GET'])
+     if nav is not None:
+         page_app.add_url_rule('/api/externalnav','externalnav',lambda:jsonify(nav.snapshot()),methods=['GET'])
+         nav.start()
+--- a/disarm_control/ipc.py
++++ b/disarm_control/ipc.py
+@@ -107,7 +107,7 @@
+         if set(self.arm_operations) - {'ARM', 'ARM_READY', 'ARM_STATUS'}:
+             raise ValueError('Invalid ARM operations')
+         self.disarm_request = disarm_request or engine.request
+-        if set(self.stop_operations) - {'STOP_STATUS', 'STOP_RESET'}:
++        if set(self.stop_operations) - {'STOP_STATUS', 'STOP_RESET', 'BENCH_RELEASE'}:
+             raise ValueError('Invalid STOP operations')
+         self.allowed_uid = os.getuid() if allowed_uid is None else allowed_uid
+         if type(self.allowed_uid) is not int or self.allowed_uid < 0:

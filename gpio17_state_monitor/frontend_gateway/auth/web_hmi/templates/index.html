@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{ csrf }}"><title>UGV №1 — HMI v0.3</title><link rel="stylesheet" href="/static/style.css?v=pixhawk-actions-20261117"><script src="/static/account.js" defer></script><script src="/static/arm.js?v=gpio17-stop" defer></script><script src="/static/disarm.js?v=pixhawk-actions-20261117" defer></script><script src="/static/app.js?v=state-monitor" defer></script></head>
+<body data-stop-reset="{{ 'yes' if can('stop.reset') else 'no' }}" data-control="{{ 'yes' if can('demo.control') else 'no' }}" data-status="{{ 'yes' if can('status.view') else 'no' }}" data-telemetry="{{ 'yes' if can('telemetry.view') else 'no' }}"><main>{% include 'account.html' %}<h1>UGV №1 <small>HMI v0.3</small></h1>
+<aside><strong>DEMO · телеметрія Pixhawk · DISARM</strong><p>Фізичний E-STOP незалежний від Web HMI. Вебкнопка DISARM не замінює його.</p></aside>
+<section><h2>Pixhawk 6C</h2>
+<p>CONNECTION: <b id="connection">UNKNOWN</b></p>
+<div class="metrics"><p>ARM/DISARM: <b id="armed">UNKNOWN</b></p><p>Flight mode: <b id="flight-mode">UNKNOWN</b></p><p>АКБ: <b id="voltage">Немає даних</b> <span id="voltage-source"></span> <span id="voltage-age"></span></p><p>Yaw: <b id="yaw">UNKNOWN</b></p></div>
+<div class="pixhawk-disarm">
+<div class="pixhawk-actions">
+<button id="pixhawk-arm" data-arm-enabled="{{ 'yes' if arm_enabled and can('pixhawk.arm') else 'no' }}" class="pixhawk-action arm-action" type="button" disabled>ARM</button>
+{% if can('pixhawk.disarm') %}<button id="pixhawk-disarm" class="pixhawk-action disarm-action" type="button" {% if not disarm_enabled %}disabled{% endif %}>DISARM</button>{% else %}<button class="pixhawk-action disarm-action" type="button" disabled>DISARM</button>{% endif %}
+</div>
+<p id="arm-notice" role="status" hidden></p>
+<p id="disarm-notice" role="status" aria-live="assertive">{% if not can('pixhawk.disarm') %}DISARM: немає дозволу.{% elif not disarm_enabled %}DISARM вимкнено.{% endif %}</p>
+{% if can('pixhawk.disarm') %}<button id="disarm-recheck" type="button" hidden>Перевірено · новий запит</button>{% endif %}
+</div></section>
+{% if not can('demo.control') %}<p role="status">Режим перегляду. Керування DEMO недоступне.</p>{% endif %}<section><h2>Місія симулятора</h2><label for="mission">Оберіть маршрут</label><select id="mission" disabled><option value="1">№1 · A → B · уперед</option><option value="2">№2 · B → A · назад без розвороту</option></select>
+<p>Умовний маршрут: 10 м. Напрямок корпусу незмінний: 0°.</p>
+<p>Стан симулятора: <strong id="state">Очікування сервера</strong></p><progress id="progress" max="100" value="0" aria-label="Прогрес місії"></progress>
+<div class="metrics"><p>Прогрес: <b id="percent">—</b></p><p>Демо-швидкість: <b id="speed">—</b></p><p>Демо-позиція від A: <b id="position">—</b></p></div>
+<div class="buttons"><button id="start" disabled>START · симуляція</button><button id="pause" disabled>PAUSE / HOLD · пауза</button><button id="resume" disabled>RESUME / ПРОДОВЖИТИ</button><button id="stop" class="stop">STOP · скасувати місію</button><button id="reset" disabled>RESET · без запуску</button><button id="fault" disabled>Імітувати FAULT</button></div>
+<p>PAUSED — штатна пауза з можливістю продовження. HOLD — безпечна зупинка без RESUME. Після STOP або аварії потрібні RESET і новий START.</p>
+<p id="production-stop-status" role="status"></p>
+{% if can('telemetry.view') %}<p id="state-monitor">VESC лівий: UNKNOWN · VESC правий: UNKNOWN · SERVO5: UNKNOWN · SERVO6: UNKNOWN · Фізичний стан гальм: UNKNOWN · AUTO-місія: UNKNOWN</p>{% endif %}
+<p id="notice" role="status" aria-live="polite"></p></section>
+<section><h2>Журнал DEMO</h2><p>Входи та дії доступні в <a href="/audit">Журналі подій</a>.</p></section>
+<dialog id="confirm"><h2>Підтвердити START?</h2><p id="route"></p><p>Запуститься лише програмна симуляція.</p><button id="yes">Підтвердити START</button><button id="cancel">Скасувати</button></dialog>
+</main></body></html>
