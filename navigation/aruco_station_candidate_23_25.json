@@ -1,0 +1,83 @@
+{
+  "state": "CANDIDATE_GEOMETRY_READY",
+  "coordinate_frame": "HOME_FRONT_DATUM",
+  "route_home_xy_m": [
+    0,
+    0
+  ],
+  "route_forward_xy": [
+    1,
+    0
+  ],
+  "markers": [
+    {
+      "id": 23,
+      "nominal_route_xy_m": [
+        2.5,
+        0
+      ],
+      "placement": "floor",
+      "measured_position_m": {
+        "x": 2.5,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "measured_orientation_deg": {
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": -90.0
+      },
+      "survey_reference": "hold_only_reconnect/package/optical/marker_map.json#ID23; longitudinal station from owner confirmation",
+      "confirmed_home_distance_m": 2.5,
+      "route_position_source": "OWNER_CONFIRMED_HOME_DISTANCE_AND_CENTERLINE"
+    },
+    {
+      "id": 24,
+      "nominal_route_xy_m": [
+        5.0,
+        0
+      ],
+      "placement": "floor",
+      "measured_position_m": {
+        "x": 5.0,
+        "y": -0.00822,
+        "z": 0.0
+      },
+      "measured_orientation_deg": {
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": -90.756
+      },
+      "survey_reference": "hold_only_reconnect/package/optical/marker_map.json#ID24; longitudinal station from owner confirmation"
+    },
+    {
+      "id": 25,
+      "nominal_route_xy_m": [
+        7.5,
+        0
+      ],
+      "placement": "floor",
+      "measured_position_m": {
+        "x": 7.5,
+        "y": -0.03854,
+        "z": 0.0
+      },
+      "measured_orientation_deg": {
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": -91.14683
+      },
+      "survey_reference": "hold_only_reconnect/package/optical/marker_map.json#ID25; longitudinal station from owner confirmation"
+    }
+  ],
+  "provenance": {
+    "legacy_map": "hold_only_reconnect/package/optical/marker_map.json",
+    "legacy_map_sha256": "b7ee266540631ab54461bf9304cd0ada6923206d8661589e153d1da5dc7d758f",
+    "archive_review": "milestones/WEB_DISARM_VALIDATED/operations/home_externalnav_ready/home_evidence.json",
+    "camera_calibration": "hold_only_reconnect/package/optical/camera_calibration_fisheye.npz",
+    "camera_calibration_sha256": "ca315d373b97009a32c5e8c4b1b6fd8c5db651fc73db667c3b5d37167f45cf10",
+    "camera_extrinsic": "hold_only_reconnect/package/optical/pose_transform_2d.py",
+    "camera_extrinsic_sha256": "0580d2324699e65b2cc1cfb8f6a7886b8960e0a6c8731e18d6da1ae0a8ee5d4a",
+    "reuse_basis": "Owner confirmed same markers, floor, height, orientation and unchanged HM2131L mount. Only longitudinal stations were changed."
+  }
+}

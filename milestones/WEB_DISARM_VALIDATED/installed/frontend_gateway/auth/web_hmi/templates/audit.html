@@ -1,0 +1,4 @@
+<!doctype html><html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="{{ csrf }}"><title>Журнал подій — UGV №1</title><link rel="stylesheet" href="/static/style.css"><script src="/static/account.js" defer></script><script src="/static/audit.js" defer></script></head>
+<body><main>{% include 'account.html' %}<h1>Журнал подій</h1>
+<p>Час відображено за Києвом (Europe/Kyiv); у сховищі — UTC. PENDING — підсумок дії не підтверджено журналом; перевірте поточний стан перед повторенням.</p>
+<div id="audit" data-scope="{{ 'all' if can('audit.all') else 'self' }}"></div><button id="more" type="button">Показати наступні</button><p id="audit-error" role="status"></p></main></body></html>

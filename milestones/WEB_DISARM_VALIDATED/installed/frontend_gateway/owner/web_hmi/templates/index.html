@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UGV №1 — HMI v0.3</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body><main><h1>UGV №1 <small>HMI v0.3</small></h1>
+<aside><strong>DEMO + PIXHAWK READ-ONLY</strong><p>Реальне керування відсутнє. CAN має залишатися фізично відключеним.</p></aside>
+<section><h2>Pixhawk 6C · READ-ONLY</h2>
+<p>CONNECTION: <b id="connection">UNKNOWN</b></p>
+<div class="metrics"><p>ARM/DISARM: <b id="armed">UNKNOWN</b></p><p>Flight mode: <b id="flight-mode">UNKNOWN</b></p><p>АКБ: <b id="voltage">UNKNOWN</b></p><p>Yaw: <b id="yaw">UNKNOWN</b></p></div>
+<p>EKF (отримані прапорці, без дозволу руху): <span id="ekf">UNKNOWN</span></p>
+<p id="freshness">UNKNOWN</p>
+<p>Усі кнопки нижче керують лише DEMO. Телеметрія не забезпечує DISARM і не надає дозволу руху. Ровер має залишатися DISARMED, CAN — фізично відключеним. Камера, фізична позиція та швидкість недоступні.</p></section>
+<section><h2>Місія симулятора</h2><label for="mission">Оберіть маршрут</label><select id="mission" disabled><option value="1">№1 · A → B · уперед</option><option value="2">№2 · B → A · назад без розвороту</option></select>
+<p>Умовний маршрут: 10 м. Напрямок корпусу незмінний: 0°.</p>
+<p>Стан симулятора: <strong id="state">Очікування сервера</strong></p><progress id="progress" max="100" value="0" aria-label="Прогрес місії"></progress>
+<div class="metrics"><p>Прогрес: <b id="percent">—</b></p><p>Демо-швидкість: <b id="speed">—</b></p><p>Демо-позиція від A: <b id="position">—</b></p></div>
+<div class="buttons"><button id="start" disabled>START · симуляція</button><button id="pause" disabled>PAUSE / HOLD · пауза</button><button id="resume" disabled>RESUME / ПРОДОВЖИТИ</button><button id="stop" class="stop">STOP · скасувати місію</button><button id="reset" disabled>RESET · без запуску</button><button id="fault" disabled>Імітувати FAULT</button></div>
+<p>PAUSED — штатна пауза з можливістю продовження. HOLD — безпечна зупинка без RESUME. Після STOP або аварії потрібні RESET і новий START.</p>
+<p id="notice" role="status" aria-live="polite"></p></section>
+<section><h2>Журнал симулятора</h2><ol id="events"></ol></section>
+<dialog id="confirm"><h2>Підтвердити START?</h2><p id="route"></p><p>Запуститься лише програмна симуляція.</p><button id="yes">Підтвердити START</button><button id="cancel">Скасувати</button></dialog>
+</main></body></html>

@@ -1,0 +1,21 @@
+{
+  "surveyed_map_sha256": null,
+  "marker_catalog_file": "aruco_100m_catalog.json",
+  "route_home_xy_m": [0, 0],
+  "axis_flu_deg": null,
+  "home_map_xy_m": null,
+  "surveyed_bounds_m": null,
+  "spacing_tolerance_m": 0.1,
+  "lateral_tolerance_m": 0.1,
+  "home_tolerance_m": 0.1,
+  "heading_tolerance_deg": 10,
+  "minimum_leg_m": 0.05,
+  "max_pose_age_s": 0.2,
+  "max_stop_age_s": 1.5,
+  "stop_at_endpoint_s": 2,
+  "survey": {
+    "home_map_zero": null,
+    "route_azimuth_deg": null,
+    "expected_ekf_origin": null
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "coordinate_frame": "HOME_FRONT_DATUM",
+  "home_m": 0,
+  "route_end_m": 100,
+  "spacing_m": 2.5,
+  "legacy_map_reference": "../marker_map.json",
+  "confirmed_sections": [],
+  "markers": [
+    {
+      "id": 23,
+      "nominal_m": 2.5,
+      "status": "INSTALLED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 24,
+      "nominal_m": 5.0,
+      "status": "INSTALLED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 25,
+      "nominal_m": 7.5,
+      "status": "INSTALLED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 26,
+      "nominal_m": 10.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 27,
+      "nominal_m": 12.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 28,
+      "nominal_m": 15.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 29,
+      "nominal_m": 17.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 30,
+      "nominal_m": 20.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 31,
+      "nominal_m": 22.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 32,
+      "nominal_m": 25.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 33,
+      "nominal_m": 27.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 34,
+      "nominal_m": 30.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 35,
+      "nominal_m": 32.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 36,
+      "nominal_m": 35.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 37,
+      "nominal_m": 37.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 38,
+      "nominal_m": 40.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 39,
+      "nominal_m": 42.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 40,
+      "nominal_m": 45.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 41,
+      "nominal_m": 47.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 42,
+      "nominal_m": 50.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 43,
+      "nominal_m": 52.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 44,
+      "nominal_m": 55.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 45,
+      "nominal_m": 57.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 46,
+      "nominal_m": 60.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 47,
+      "nominal_m": 62.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 48,
+      "nominal_m": 65.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 49,
+      "nominal_m": 67.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 50,
+      "nominal_m": 70.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 51,
+      "nominal_m": 72.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 52,
+      "nominal_m": 75.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 53,
+      "nominal_m": 77.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 54,
+      "nominal_m": 80.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 55,
+      "nominal_m": 82.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 56,
+      "nominal_m": 85.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 57,
+      "nominal_m": 87.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 58,
+      "nominal_m": 90.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 59,
+      "nominal_m": 92.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 60,
+      "nominal_m": 95.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 61,
+      "nominal_m": 97.5,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    },
+    {
+      "id": 62,
+      "nominal_m": 100.0,
+      "status": "PLANNED",
+      "geometry_status": "UNCONFIRMED",
+      "measured_position": null
+    }
+  ]
+}

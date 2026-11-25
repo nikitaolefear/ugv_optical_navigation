@@ -1,0 +1,25 @@
+{
+  "mode": "OFFLINE_PREVIEW",
+  "tx_enabled": false,
+  "message": "VISION_POSITION_ESTIMATE",
+  "map_frame": "HOME_FRONT_DATUM",
+  "input_frame": "LOCAL_FRD",
+  "output_frame": "LOCAL_NED",
+  "timestamp_clock": "CLOCK_MONOTONIC",
+  "max_pose_age_s": 0.2,
+  "marker_ids": [23, 24, 25],
+  "expected_ekf_origin": null,
+  "map_origin_ned_m": null,
+  "map_x_azimuth_deg": null,
+  "required_parameters": {
+    "AHRS_EKF_TYPE": 3,
+    "EK3_ENABLE": 1,
+    "EK3_SRC2_POSXY": 6,
+    "EK3_SRC2_YAW": 6,
+    "EK3_SRC2_VELXY": 0,
+    "EK3_SRC2_VELZ": 0,
+    "EK3_SRC_OPTIONS": 0,
+    "VISO_TYPE": 1,
+    "VISO_QUAL_MIN": 0
+  }
+}
