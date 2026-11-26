@@ -1,0 +1,25 @@
+{
+  "map_file": "../marker_map.json",
+  "coordinate_frame": "HOME_FRONT_DATUM",
+  "marker_ids": [
+    23,
+    24,
+    25
+  ],
+  "cycles": 1,
+  "endpoints_m": {
+    "A": null,
+    "B": null
+  },
+  "stop_at_endpoint_s": 2,
+  "optical_max_age_s": 0.2,
+  "ekf_max_age_s": 0.5,
+  "mavlink_survey": {
+    "home": null,
+    "ekf_origin": null,
+    "map_zero": null,
+    "map_x_azimuth_deg": null,
+    "A": null,
+    "B": null
+  }
+}

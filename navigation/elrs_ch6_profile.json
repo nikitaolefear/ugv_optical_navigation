@@ -1,0 +1,17 @@
+{
+  "state": "REVIEW_ONLY",
+  "firmware": "Rover 4.7.2",
+  "proposed_parameters": {
+    "MODE_CH": 6,
+    "RC6_OPTION": 0,
+    "RC8_OPTION": 0,
+    "MODE1": 0,
+    "MODE2": 4,
+    "MODE3": 4,
+    "MODE4": 4,
+    "MODE5": 4,
+    "MODE6": 10
+  },
+  "switch_targets_us": {"MANUAL": 1000, "HOLD": 1500, "AUTO": 2000},
+  "preserve": ["RC5_OPTION", "INITIAL_MODE", "RC failsafe", "HOLD-only", "inhibit", "STOP_LATCH"]
+}

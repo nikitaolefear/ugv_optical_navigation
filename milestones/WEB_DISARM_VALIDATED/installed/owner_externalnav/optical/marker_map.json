@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "coordinate_frame": "HOME_FRONT_DATUM",
+  "position_unit": "m",
+  "orientation_unit": "deg",
+  "markers": [
+    {
+      "id": 23,
+      "placement": "floor",
+      "position": {
+        "x": 3.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "orientation": {
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": -90.0
+      }
+    },
+    {
+      "id": 24,
+      "placement": "floor",
+      "position": {
+        "x": 4.04537,
+        "y": -0.00822,
+        "z": 0.0
+      },
+      "orientation": {
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": -90.756
+      }
+    },
+    {
+      "id": 25,
+      "placement": "floor",
+      "position": {
+        "x": 5.08802,
+        "y": -0.03854,
+        "z": 0.0
+      },
+      "orientation": {
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": -91.14683
+      }
+    }
+  ]
+}
