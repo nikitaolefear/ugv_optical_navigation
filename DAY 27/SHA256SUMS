@@ -68,6 +68,7 @@ c5571bc6d4cd1e20582b2257225f00ed6b25ac5efacfd5fdaed154a73b190ac5  ./06-operator/
 3ccbb91b70f3d332308d8f4b19a92d50ea3b750a57a27d72623b79fcbf526006  ./06-operator/b2-ftp-overlay/test_transaction.sh
 b0bac7e3f59c935914b1f2a43bff4281dcf82af1298364cca1f588105dc3ba20  ./06-operator/b2-ftp-overlay/transaction.sh
 dca889a265a09cbadf65977bacaf456681a5e09fd4d92c4bd252dda3a381b961  ./06-operator/b2-log-overlay/BASE_SHA256
+adaaaf364529beaf625bf8508e63d5ae65340ce2bfedb9d334cc3c71a71fe677  ./06-operator/b2-log-overlay/LOG-DISARMED-INDEX-READBACK.md
 f12c1b7889c105c891c7bb5208ec48b40d0f11efe9b2c7ebf067318c334e597c  ./06-operator/b2-log-overlay/OPERATOR.md
 5b4da3647354f7a6460de4ce045e929dcdee87b805cead5659abfb220a974709  ./06-operator/b2-log-overlay/PROCEDURE.md
 43a80e1f8a778b576c1806df12785711a70bf7fe140067a7d5dcc94c1212133c  ./06-operator/b2-log-overlay/SHA256SUMS

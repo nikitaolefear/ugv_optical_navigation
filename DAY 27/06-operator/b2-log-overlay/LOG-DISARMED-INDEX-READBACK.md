@@ -1,0 +1,7 @@
+# LOG_DISARMED targeted readback
+
+The installed read-only B2 returned LOG_DISARMED=0. The Owner accepted only PARAM_VALUE from sysid/compid 1/1 with the exact requested name. Owner observation time was 28204.949759497 s monotonic, within the request bracket 16:35:24.325–16:35:24.729 UTC on 27 November 2026. The IPC returned only kind, value and observed_at. param_count, param_type and param_index were not exported or captured from the wire.
+
+The installed sender requests the name with param_index=-1 and B2 offers no indexed-read operation. Rover 4.7.2 copies the request index into its asynchronous reply, so this named request is expected to return the sentinel 65535, even if the raw header were exposed. The physical parameter index remains unknown. An approved read-only inventory from the same controller and current parameter configuration is needed, followed by an indexed read confirming the name and index. No parameter list or parameter write was requested. [Rover 4.7.2 parameter handler](https://raw.githubusercontent.com/ArduPilot/ardupilot/Rover-4.7.2/libraries/GCS_MAVLink/GCS_Param.cpp#L355-L388)
+
+One Owner, B2, fresh heartbeat, HOLD, DISARMED, inhibit, STOP latch and ExternalNav TX=0 were confirmed. A new TIMESYNC had RTT 12.512 ms; fresh Observer evidence indicated SRC1. Package and baseline SHA256 verified. Deployment remains blocked. No deployment or service restart occurred.
