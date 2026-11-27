@@ -89,9 +89,10 @@ fc7a991ee716216a42f9bfc418f63f7e13c0e582487464ff1fb5dc2d41370872  ./06-operator/
 c508cd8a26c7ca30493acf09d759ae1aeea8dab9027b8c0c47538c2098ae0b00  ./06-operator/b2-log-overlay/test_pwm_capture.py
 22703f742986a404f8302d858bf1b65a897c862df190e58800ba1242ee7309e0  ./06-operator/b2-log-overlay/test_transaction.sh
 b6d02f0ff03f81e61dedce19880417a7823090ffadfc0ad30372fb908d458e64  ./06-operator/b2-log-overlay/transaction.sh
+a31c3afd9bd6d01a7648708a390cb017f19915a9e64011a8688f2084b328e346  ./06-operator/b3-active/AUDIT-READY.md
 dca889a265a09cbadf65977bacaf456681a5e09fd4d92c4bd252dda3a381b961  ./06-operator/b3-active/BASE_SHA256
 2ce8631e62646918d9313a46b47fa6798be31c1b87e956ade86800ee5e43f2c4  ./06-operator/b3-active/OPERATOR.md
-62da3bd773aa5954b1e22c748a4cf7e44060f6c9b94700c77999e4f55926ff26  ./06-operator/b3-active/SHA256SUMS
+db273f1e397467d9d9e94ec302ffa294c3510319ce64ce368828bf5a3f6cba00  ./06-operator/b3-active/SHA256SUMS
 4e70d89d39e382f31ce1c6eab83c4d6ffe677ec0c0d364c9eb32d1b8608a3ee9  ./06-operator/b3-active/TEST-REPORT.md
 30695ce319a3bd5540c248300bcfd5b4c6c640fc11b04ed7e4722f1031097edc  ./06-operator/b3-active/active-delta.patch
 242e54fd19be48d6973a8338274150c361bf75d8e25b1cb7d58003bd8aafc76c  ./06-operator/b3-active/b3_client.py
