@@ -75,6 +75,11 @@ f366f56abb260618b12fdadd2d065af811dc939dc5422306d4ce13e06ebe22f5  ./06-operator/
 042d7fc13d9a279c31aeca3671f4306087f6022eaa89814ff60ae68a029710db  ./06-operator/previous.txt
 8b4988ed978ec4d33012c3eba99ec6df955835bbc7180f0be5a23a5806c120e5  ./06-operator/regression-hmi.txt
 b21de784a803ec6c721bcae0948b0455493c5e960b777e6846f670f8f58b9d09  ./06-operator/regression-nav.txt
+6fd669e53e3099bddd8fba20c945532ea248e4828cd2594d2420f919e25ec5e4  ./06-operator/src-observer-preflight/PROCEDURE.md
+253d9b5171ec0677af1ad606bc7c7b26199e17e0d37911c58865ef3cd06cb14a  ./06-operator/src-observer-preflight/observer_preflight.py
+960f125c87258957cf07c2c13c5c83c4395f478fa0758fbffbd0263b98e49499  ./06-operator/src-observer-preflight/stage3_src_observer.lua
+1cf6d8e53ae3985a7e75a39b1c0ca3912bb4452581e00fe5c23e93f4de6b9ef6  ./06-operator/src-observer-preflight/test_observer.lua
+0b88f5797a7d08dc916e21fa17113e873e62d45f9051745e930ede6e702abcec  ./06-operator/src-observer-preflight/test_observer_preflight.py
 960f125c87258957cf07c2c13c5c83c4395f478fa0758fbffbd0263b98e49499  ./06-operator/stage3_src_observer.lua
 0f16806472b5810c4b4605ba9df0144fa48e97a4e90f7722d0006e82da6bc852  ./06-operator/test_operator.py
 9e3d7ce0478a5cccf41525218e26557ea17cac0abc1a487f4c4fcd1dbc07fcea  ./B0-2026-11-27.md
