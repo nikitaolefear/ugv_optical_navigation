@@ -1,0 +1,7 @@
+# B2-LOG live discovery
+
+**INCONCLUSIVE.** Operator-deployed B2-LOG was active and matched the verified package. The single authorized discovery invocation was cancelled by revoking its marker when a safety sample failed to confirm both fresh brake PWM values at 999 microseconds. The failed sample did not retain individual PWM fields. A later snapshot was fresh and showed 999/999 microseconds. A physical change in the brakes is not established. No further list request was made.
+
+Owner reported no index proof and latched transport_fault. Completeness, unique count and duplicates were unavailable from the interface. No separate indexed confirmation was reached. The same equipment/session identity was reported before and after. HMI remained active with one Owner. Heartbeat sampled during the attempt was 0.578–0.942 s. HOLD, DISARMED, inhibit and STOP latch stayed confirmed in those status samples. ExternalNav sent=0 and disabled. A subsequent named B2 read confirmed LOG_DISARMED=0. Fresh Observer evidence after TIMESYNC (RTT 12.650 ms) confirmed SRC1.
+
+No PARAM_SET was authorized or requested. Only a discover marker was created and it was revoked. Queue empty, DataFlash idle, no unfinished transaction. B2-LOG is still active. Zero service journal entries at error level or above were observed after activation. Resolve brake-output telemetry freshness during parameter streaming before any separately authorized retry. No deployment or restart was repeated. Raw logs and hardware/session identifiers are excluded.

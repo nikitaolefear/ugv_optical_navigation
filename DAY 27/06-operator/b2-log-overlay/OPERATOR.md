@@ -17,7 +17,7 @@ On the Pi after an approved deployment:
 ```bash
 source /etc/ugv-disarm/identities.env
 p=$(cat /run/ugv-stage3-operator/log-profile/payload)
-py=$(awk -F= '/^ExecStart=// {split($2,a," "); print a[1]}' /run/ugv-stage3-operator/B2.conf)
+py=$(awk -F= '/^ExecStart=[/]/{split($2,a," "); print a[1]}' /run/ugv-stage3-operator/B2.conf)
 log_op() {
   sudo -u "#$UGV_GATEWAY_UID" -g "#$UGV_OWNER_RPC_GID" \
     env PYTHONPATH="$p" "$py" -B "$p/log_client.py" "$@" \
@@ -42,14 +42,14 @@ fields=[i[k] for k in ("hardware","pi_boot","fc_boot","owner_session")]
 assert all(re.fullmatch("[a-f0-9]{32,64}",v) for v in fields)
 print(" ".join(["B2-LOG",*fields,action,tx]))
 ' "$action" "$tx")
-  sudo bash -eu -c '
-    d=/run/ugv-stage3-operator/log-profile
-    t=$(mktemp "$d/.authorization.XXXXXX")
-    trap '''rm -f -- "$t"''' EXIT
-    printf "%s\n" "$1" > "$t"
-    chmod 0644 "$t"
-    mv -T -- "$t" "$d/authorization"
-  ' _ "$auth"
+  sudo bash -eu -s -- "$auth" <<'SH'
+d=/run/ugv-stage3-operator/log-profile
+t=$(mktemp "$d/.authorization.XXXXXX")
+trap 'rm -f -- "$t"' EXIT
+printf "%s\n" "$1" > "$t"
+chmod 0644 "$t"
+mv -T -- "$t" "$d/authorization"
+SH
 )
 revoke_log() { sudo rm -f -- /run/ugv-stage3-operator/log-profile/authorization; }
 ```

@@ -68,10 +68,11 @@ c5571bc6d4cd1e20582b2257225f00ed6b25ac5efacfd5fdaed154a73b190ac5  ./06-operator/
 3ccbb91b70f3d332308d8f4b19a92d50ea3b750a57a27d72623b79fcbf526006  ./06-operator/b2-ftp-overlay/test_transaction.sh
 b0bac7e3f59c935914b1f2a43bff4281dcf82af1298364cca1f588105dc3ba20  ./06-operator/b2-ftp-overlay/transaction.sh
 dca889a265a09cbadf65977bacaf456681a5e09fd4d92c4bd252dda3a381b961  ./06-operator/b2-log-overlay/BASE_SHA256
+c7a7fe044370f21285a12851d667eb81e00056acbd0287e1b8037dc52aba5f5a  ./06-operator/b2-log-overlay/DISCOVERY-LIVE-RESULT.md
 adaaaf364529beaf625bf8508e63d5ae65340ce2bfedb9d334cc3c71a71fe677  ./06-operator/b2-log-overlay/LOG-DISARMED-INDEX-READBACK.md
-cbc0c45f5a0bf1a619787f08f5919d354e242b90311151cd8ced0865cedb7957  ./06-operator/b2-log-overlay/OPERATOR.md
+afc96667129a2c09fb205773aea687c19d959ddc4a582c054306942191801a12  ./06-operator/b2-log-overlay/OPERATOR.md
 d6b374dcfd2321f892778d19b228c699e13eb570e8348d867ecd3c706e2d7ddc  ./06-operator/b2-log-overlay/PROCEDURE.md
-00be694ad8d76c2bec21b36bc65428bf3d20261c8e93840cd0d22ec848211cd2  ./06-operator/b2-log-overlay/SHA256SUMS
+168c79e72d15b2784e52bee98d11c625cf897dc14d91c82474ee0ec46d6e0048  ./06-operator/b2-log-overlay/SHA256SUMS
 30b27e43d30bbc8ccc0963175daa3c8cd75550abe216a19b6f607b169892e530  ./06-operator/b2-log-overlay/TEST-REPORT.md
 ec1ee9e68acf9f062d68dc5a5242135746601c354aeae1687a3b7f7502171998  ./06-operator/b2-log-overlay/dataflash_proof.py
 054634eeda8e2f7f43d42b61141c80bb0f9d5b73db8d63add086a27a63823c61  ./06-operator/b2-log-overlay/deploy.sh
