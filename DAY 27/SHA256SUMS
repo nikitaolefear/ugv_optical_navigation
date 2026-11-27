@@ -50,6 +50,9 @@ c511c8d309fed418a1a4dc2a98a9b8a82306dd7054bb506721ef05756004edaf  ./06-operator/
 f3554641400508009ae34ccb5d68807321fdac0658c065ce687aef86a022aa63  ./06-operator/OPERATOR_CANDIDATE.patch
 5410203482314fe7013872c36c7a3943ddd76c7bc747cd4754efc6c11062b9ae  ./06-operator/TEST_REPORT.md
 f366f56abb260618b12fdadd2d065af811dc939dc5422306d4ce13e06ebe22f5  ./06-operator/integration.txt
+097c09d1b9a6f4f14e72bdaebb360a2b5514d796705d83fe7f1cd247430de7f1  ./06-operator/mavftp-readonly/README.md
+1103c3e700147cd4463fb611bc3f407c207dfeb2f38081d25550640354669447  ./06-operator/mavftp-readonly/scripts_ftp.py
+92c806e6533e7d8ae357c9744dcd004bfa25445f9213f71bb909a2fcd46e330c  ./06-operator/mavftp-readonly/test_scripts_ftp.py
 7527c1c3f139a04804edffb05c0f3e2e505c09a0bb57dd77c27bd422d2142512  ./06-operator/operator_cli.py
 8c6c66382e75e828a3e59788711c8d21f895a2cd3d28ba1841460740ff71468a  ./06-operator/overlay-tests.txt
 042d7fc13d9a279c31aeca3671f4306087f6022eaa89814ff60ae68a029710db  ./06-operator/previous.txt
