@@ -1,0 +1,21 @@
+test_actual_unix_ipc_all_phases_restore_and_original_status (test_integration.Tests.test_actual_unix_ipc_all_phases_restore_and_original_status) ... ok
+test_concurrent_open_different_peer_and_replay (test_integration.Tests.test_concurrent_open_different_peer_and_replay) ... ok
+test_exact_vpe_visp_join_reports_ambiguity (test_integration.Tests.test_exact_vpe_visp_join_reports_ambiguity) ... ok
+test_hard_deadline_overrules_recent_renewal (test_integration.Tests.test_hard_deadline_overrules_recent_renewal) ... ok
+test_heartbeat_arm_hold_stop_guard_all_close_serial (test_integration.Tests.test_heartbeat_arm_hold_stop_guard_all_close_serial) ... ok
+test_killed_client_idle_deadline_no_late_serial_writes (test_integration.Tests.test_killed_client_idle_deadline_no_late_serial_writes) ... MAX_TESTED_STOP_SECONDS=0.758895
+ok
+test_owner_without_diagnostic_dispatch_preserves_status (test_integration.Tests.test_owner_without_diagnostic_dispatch_preserves_status) ... ok
+test_preflight_proof_and_live_gate (test_integration.Tests.test_preflight_proof_and_live_gate) ... ok
+test_rollback_readback_failure (test_integration.Tests.test_rollback_readback_failure) ... ok
+test_src_ack_rejection_and_accepted_without_source_change (test_integration.Tests.test_src_ack_rejection_and_accepted_without_source_change) ... ok
+test_stop_and_write_barrier (test_integration.Tests.test_stop_and_write_barrier) ... ok
+test_synthetic_owner_restart_rejects_old_token (test_integration.Tests.test_synthetic_owner_restart_rejects_old_token) ... ok
+test_trace_overflow_aborts_and_does_not_pass (test_integration.Tests.test_trace_overflow_aborts_and_does_not_pass) ... ok
+test_uid_refusal_and_existing_profile_has_no_stage3 (test_integration.Tests.test_uid_refusal_and_existing_profile_has_no_stage3) ... ok
+test_wrong_ack_unconfirmed_src_and_missing_parameter_readback (test_integration.Tests.test_wrong_ack_unconfirmed_src_and_missing_parameter_readback) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 5.219s
+
+OK

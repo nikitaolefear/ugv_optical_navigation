@@ -1,0 +1,13 @@
+test_candidate_map_matches_worker_format_and_calibration (regression_nav.NavBenchTXTests.test_candidate_map_matches_worker_format_and_calibration) ... ok
+test_continuous_stream_loss_latches_tx_off_and_requests_hold_once (regression_nav.NavBenchTXTests.test_continuous_stream_loss_latches_tx_off_and_requests_hold_once) ... ok
+test_heartbeat_timeout_latches_guard_measurement_even_after_recovery (regression_nav.NavBenchTXTests.test_heartbeat_timeout_latches_guard_measurement_even_after_recovery) ... ok
+test_home_requires_matching_origin_ack_and_independent_id242 (regression_nav.NavBenchTXTests.test_home_requires_matching_origin_ack_and_independent_id242) ... ok
+test_mission_session_transmits_past_two_minutes_and_stops_at_lease_expiry (regression_nav.NavBenchTXTests.test_mission_session_transmits_past_two_minutes_and_stops_at_lease_expiry) ... ok
+test_one_shot_origin_and_src2_require_distinct_readbacks (regression_nav.NavBenchTXTests.test_one_shot_origin_and_src2_require_distinct_readbacks) ... ok
+test_operational_heartbeat_accepts_observed_jitter_but_rejects_a_missed_cycle (regression_nav.NavBenchTXTests.test_operational_heartbeat_accepts_observed_jitter_but_rejects_a_missed_cycle) ... ok
+test_owner_tick_sends_only_planar_pose_and_latches_loss (regression_nav.NavBenchTXTests.test_owner_tick_sends_only_planar_pose_and_latches_loss) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 4.799s
+
+OK

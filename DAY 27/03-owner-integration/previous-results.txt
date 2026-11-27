@@ -1,0 +1,33 @@
+test_clock_step_and_missing_ekf_rows (test_runner.EvidenceTests.test_clock_step_and_missing_ekf_rows) ... ok
+test_dataflash_overrules_ack_or_missing_live_src (test_runner.EvidenceTests.test_dataflash_overrules_ack_or_missing_live_src) ... ok
+test_inconclusive_aiding_missing_and_truncated_file (test_runner.EvidenceTests.test_inconclusive_aiding_missing_and_truncated_file) ... ok
+test_pass_and_xy_failure (test_runner.EvidenceTests.test_pass_and_xy_failure) ... ok
+test_accepted_ack_with_known_wrong_src_fails (test_runner.RunnerTests.test_accepted_ack_with_known_wrong_src_fails) ... ok
+test_ack_is_not_source_verification (test_runner.RunnerTests.test_ack_is_not_source_verification) ... ok
+test_already_src2_never_switches (test_runner.RunnerTests.test_already_src2_never_switches) ... ok
+test_failed_revoke_blocks_further_mutation (test_runner.RunnerTests.test_failed_revoke_blocks_further_mutation) ... ok
+test_live_guards (test_runner.RunnerTests.test_live_guards) ... ok
+test_manual_isolation_and_approval (test_runner.RunnerTests.test_manual_isolation_and_approval) ... ok
+test_missing_ack (test_runner.RunnerTests.test_missing_ack) ... ok
+test_no_growth_and_parameter_error (test_runner.RunnerTests.test_no_growth_and_parameter_error) ... ok
+test_rejected_ack (test_runner.RunnerTests.test_rejected_ack) ... ok
+test_restore_error_is_fail_and_profile_restore_still_attempted (test_runner.RunnerTests.test_restore_error_is_fail_and_profile_restore_still_attempted) ... ok
+test_signals_and_unexpected_exception (test_runner.RunnerTests.test_signals_and_unexpected_exception) ... ok
+test_static_counter_with_fresh_tx_age_fails (test_runner.RunnerTests.test_static_counter_with_fresh_tx_age_fails) ... ok
+test_three_phases_preserve_xy_failure_evidence_and_restore (test_runner.RunnerTests.test_three_phases_preserve_xy_failure_evidence_and_restore) ... ok
+test_unknown_initial_is_inconclusive_and_never_enables (test_runner.RunnerTests.test_unknown_initial_is_inconclusive_and_never_enables) ... ok
+test_actual_routes_and_snapshot_fields (test_adapter.AdapterTests.test_actual_routes_and_snapshot_fields) ... ok
+test_actual_unsupported_mutations_and_readback (test_adapter.AdapterTests.test_actual_unsupported_mutations_and_readback) ... ok
+test_bad_json_and_invalid_schema (test_adapter.AdapterTests.test_bad_json_and_invalid_schema) ... ok
+test_live_cli_refused (test_adapter.AdapterTests.test_live_cli_refused) ... ok
+test_repeated_ack_and_unavailable_source_never_confirm_transition (test_adapter.AdapterTests.test_repeated_ack_and_unavailable_source_never_confirm_transition) ... ok
+test_stale_data_and_tx_on (test_adapter.AdapterTests.test_stale_data_and_tx_on) ... ok
+test_transport_errors_never_become_success (test_adapter.AdapterTests.test_transport_errors_never_become_success) ... ok
+test_hard_expiry_and_explicit_revoke (test_adapter.LeaseTests.test_hard_expiry_and_explicit_revoke) ... ok
+test_idle_expiry_on_stall_or_ipc_loss_and_late_renewal (test_adapter.LeaseTests.test_idle_expiry_on_stall_or_ipc_loss_and_late_renewal) ... ok
+test_real_client_sigkill_owner_model_expires_without_callback (test_adapter.LeaseTests.test_real_client_sigkill_owner_model_expires_without_callback) ... ok
+
+----------------------------------------------------------------------
+Ran 28 tests in 1.256s
+
+OK

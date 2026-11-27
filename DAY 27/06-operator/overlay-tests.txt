@@ -1,0 +1,9 @@
+test_b1_no_writes_or_reads_except_snapshot (test_operator.OperatorTests.test_b1_no_writes_or_reads_except_snapshot) ... ok
+test_b2_does_not_expose_mutation_and_validates_readback (test_operator.OperatorTests.test_b2_does_not_expose_mutation_and_validates_readback) ... ok
+test_catalog_and_prefix_are_peer_bound_and_end_is_required (test_operator.OperatorTests.test_catalog_and_prefix_are_peer_bound_and_end_is_required) ... ok
+test_real_unix_uid_check_and_normal_status (test_operator.OperatorTests.test_real_unix_uid_check_and_normal_status) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.061s
+
+OK

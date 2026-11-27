@@ -1,0 +1,7 @@
+M disarm_control/ipc.py
+A disarm_control/stage3.py
+M owner/stop_latch_test/diagnostics.py
+M owner/stop_latch_test/hold_runner.py
+A stage3_tools/dataflash_checks.py
+A stage3_tools/evidence.py
+A stage3_tools/integrated_runner.py

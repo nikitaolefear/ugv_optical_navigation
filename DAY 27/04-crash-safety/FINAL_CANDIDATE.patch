@@ -1,0 +1,1098 @@
+--- a/disarm_control/ipc.py
++++ b/disarm_control/ipc.py
+@@ -13,6 +13,7 @@
+ from threading import Thread
+ 
+ from .engine import Rejected, finite
++from .stage3 import OPERATIONS as STAGE3_OPERATIONS, Refused
+ 
+ LIMIT = 4096
+ MISSION_STATUS_REPLY_LIMIT = 8192
+@@ -99,6 +100,12 @@
+         socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize('3i')))[1]
+ 
+ 
++def peer_generation(pid):
++    # /proc stat field 22. Split from the final ')' to handle process names.
++    fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
++    return int(fields[19])
++
++
+ MISSION_OPERATIONS = ('MISSION_PREVIEW', 'MISSION_REQUEST', 'MISSION_STATUS')
+ BRAKE_OPERATIONS = ('BRAKE_APPLY', 'BRAKE_RELEASE', 'BRAKE_RESET')
+ BRAKE_STATES = ('REQUESTED', 'BLOCKED', 'UNKNOWN')
+@@ -116,8 +123,9 @@
+ 
+ class OwnerServer:
+     """Explicit start only, one bounded request at a time, no unlink-on-start."""
+-    def __init__(self, engine, path, *, allowed_uid=None, policy=None, stop_operations=None, arm_operations=None, disarm_request=None, brake_operations=None, mission_operations=None):
++    def __init__(self, engine, path, *, allowed_uid=None, policy=None, stop_operations=None, arm_operations=None, disarm_request=None, brake_operations=None, mission_operations=None, stage3_dispatch=None):
+         self.engine, self.path = engine, Path(path)
++        self.stage3_dispatch = stage3_dispatch
+         self.stop_operations = stop_operations or {}
+         self.arm_operations = arm_operations or {}
+         if set(self.arm_operations) - {'ARM', 'ARM_READY', 'ARM_STATUS'}:
+@@ -154,14 +162,19 @@
+                     nonce = body.get('nonce')
+                     operation = body.get('op')
+                     mission = type(operation) is str and operation in owner.mission_operations
++                    stage3 = (owner.stage3_dispatch is not None and type(operation) is str
++                              and operation in STAGE3_OPERATIONS)
+                     fields = {'op', 'actor_id', 'actor', 'request_id', 'nonce'}
+-                    if mission:
++                    if mission or stage3:
+                         fields.add('payload')
+-                    if (set(body) != fields or (mission and type(body['payload']) is not dict) or
++                    if (set(body) != fields or ((mission or stage3) and type(body['payload']) is not dict) or
+                             type(nonce) is not str or len(nonce) != 32 or
+                             any(c not in '0123456789abcdef' for c in nonce)):
+                         raise Rejected('INVALID_REQUEST')
+-                    if mission:
++                    if stage3:
++                        pid, uid, _ = struct.unpack('3i', self.request.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
++                        value = owner.stage3_dispatch((uid, pid, peer_generation(pid)), operation, body['payload'])
++                    elif mission:
+                         value = owner.mission_operations[operation](body['actor_id'], body['actor'],
+                                                                     body['request_id'], body['payload'])
+                     elif body['op'] == 'DISARM':
+@@ -177,7 +190,7 @@
+                     else:
+                         raise Rejected('UNKNOWN_OPERATION')
+                     response = {'ok': True, 'command': value}
+-                except Rejected as exc:
++                except (Rejected, Refused) as exc:
+                     response = {'ok': False, 'error': str(exc)}
+                 except Exception:
+                     response = {'ok': False, 'error': 'OWNER_UNAVAILABLE'}
+@@ -246,8 +259,8 @@
+             body = dict(op=op, actor_id=actor['id'], actor=actor['username'],
+                         request_id=request_id, nonce=nonce)
+             if payload is not None:
+-                if op not in MISSION_OPERATIONS or type(payload) is not dict:
+-                    raise ValueError('Payload is restricted to mission IPC')
++                if op not in MISSION_OPERATIONS + tuple(STAGE3_OPERATIONS) or type(payload) is not dict:
++                    raise ValueError('Payload is restricted to allowlisted IPC')
+                 body['payload'] = payload
+             stream.sendall(json.dumps(body, allow_nan=False).encode() + b'\n')
+             limit = MISSION_STATUS_REPLY_LIMIT if op == 'MISSION_STATUS' else LIMIT
+--- /dev/null
++++ b/disarm_control/stage3.py
+@@ -0,0 +1,352 @@
++"""Owner-local diagnostic gate. Serial access is injected by the sole owner."""
++from dataclasses import dataclass
++import json
++import hashlib
++import os
++from pathlib import Path
++import queue
++import secrets
++import threading
++import time
++
++OPERATIONS = frozenset('S3_OPEN S3_START S3_RENEW S3_STOP S3_STATUS S3_LOG_ON S3_SRC2 S3_RESTORE'.split())
++IDLE = .75
++
++
++class Refused(RuntimeError):
++    pass
++
++
++class Trace:
++    def __init__(self, path, *, limit=2048, max_bytes=32 * 1024 * 1024, clock=time):
++        self.clock = clock
++        self.queue = queue.Queue(limit)
++        self.limit = max_bytes
++        self.failed = False
++        self.dropped = 0
++        self.closed = False
++        self.count = 0
++        self.fd = os.open(Path(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
++        self.worker = threading.Thread(target=self._drain, daemon=True)
++        self.worker.start()
++
++    def push(self, event, **fields):
++        if self.failed or self.closed:
++            self.dropped += 1
++            return False
++        try:
++            self.queue.put_nowait(dict(event=event, monotonic=self.clock.monotonic(),
++                                       utc_ns=self.clock.time_ns(), **fields))
++            return True
++        except queue.Full:
++            self.failed = True
++            self.dropped += 1
++            return False
++
++    def _drain(self):
++        try:
++            while not self.closed or not self.queue.empty():
++                try:
++                    row = self.queue.get(timeout=.05)
++                except queue.Empty:
++                    continue
++                data = (json.dumps(row, default=str) + '\n').encode()
++                if self.count + len(data) > self.limit or os.write(self.fd, data) != len(data):
++                    raise OSError('trace quota or partial write')
++                self.count += len(data)
++            os.fsync(self.fd)
++        except Exception:
++            self.failed = True
++            self.dropped += 1 + self.queue.qsize()
++        finally:
++            os.close(self.fd)
++
++    def close(self):
++        self.closed = True
++        self.worker.join(2)
++        if self.worker.is_alive():
++            self.failed = True
++
++
++@dataclass
++class Pending:
++    kind: str
++    value: int
++    deadline: float
++    sent: bool = False
++    ack: str | None = None
++    read_requested: bool = False
++
++
++class Stage3:
++    def __init__(self, *, clock, trace, baseline, guard, action, restore_eligible,
++                 hard_seconds=180, idle=IDLE, recording_proven=lambda: False, driver_queue_empty=lambda fd: False, source_reader=None, store=None, profile_verifier=None):
++        self.clock, self.trace, self.baseline, self.guard = clock, trace, baseline, guard
++        self.action, self.restore_eligible = action, restore_eligible
++        self.hard_seconds, self.idle = hard_seconds, idle
++        self.recording_proven, self.driver_queue_empty = recording_proven, driver_queue_empty
++        self.driver_empty = True
++        self.source_reader = source_reader
++        self.store = store
++        self.profile_verifier = profile_verifier
++        self.write_active = False
++        self.confirmed = []
++        self.journal_error = False
++        self.renew_seq = 0
++        self.lock = threading.RLock()
++        self.token = self.peer = self.old = None
++        self.hard = self.until = 0.0
++        self.t0 = None
++        self.stopped = True
++        self.ended_at = None
++        self.write_fault = False
++        self.writes = 0
++        self.bytes_written = 0
++        self.last_write = None
++        self.pending = None
++        self.last_action = None
++        self.log_dirty = self.src_dirty = False
++        self.phase = 'A'
++        self.restoring = False
++        self.restore_failed = False
++
++    def _stop(self, reason):
++        if not self.stopped:
++            self.stopped = True
++            self.ended_at = self.clock()
++            self.trace.push('lease_stop', reason=reason, writes=self.writes)
++
++    def _expire(self):
++        if not self.stopped and (self.clock() >= min(self.hard, self.until)
++                                 or self.trace.failed or self.journal_error or (self.store is not None and self.store.failed) or not self.guard()):
++            self._stop('LEASE_OR_GUARD_LOST')
++
++    def dispatch(self, peer, op, payload):
++        with self.lock:
++            self._expire()
++            now = self.clock()
++            if op == 'S3_OPEN':
++                if payload or self.token is not None or not self.guard() or self.trace.failed:
++                    raise Refused('OPEN_REFUSED')
++                baseline = self.baseline()
++                if baseline is None or baseline.get('source') not in (1, 2, 3) or type(baseline.get('log_disarmed')) is not int or baseline.get('log_disarmed') not in (0, 1, 2, 3):
++                    raise Refused('UNVERIFIED_BASELINE')
++                token = secrets.token_hex(32)
++                if self.store is not None:
++                    self.store.start(hashlib.sha256(token.encode()).hexdigest(), baseline)
++                self.old, self.peer = dict(baseline), peer
++                self.token = token
++                self.hard, self.until = now + 30, now + self.idle
++                self.stopped = False
++                self.trace.push('lease_open', hard_end=self.hard)
++                return dict(token=self.token, baseline=self.old, hard_end=self.hard)
++            expected = {'token', 'phase', 'seq'} if op == 'S3_RENEW' else {'token'}
++            if op not in OPERATIONS or set(payload) != expected or self.token is None or peer != self.peer or not secrets.compare_digest(str(payload['token']), self.token):
++                raise Refused('SESSION_REFUSED')
++            if op == 'S3_STOP':
++                self._stop('EXPLICIT_STOP')
++            elif op == 'S3_RESTORE':
++                if not self.stopped or self.write_active or self.write_fault or not self.driver_empty or not self.restore_eligible():
++                    raise Refused('TX_STOP_OR_RESTORE_UNCONFIRMED')
++                self.restoring = True
++            elif op != 'S3_STATUS':
++                if self.stopped:
++                    raise Refused('EXPIRED')
++                if op == 'S3_START':
++                    if (not self.recording_proven() or self.t0 is not None or self.pending is not None or
++                            (self.old['log_disarmed'] != 1 and
++                             (self.last_action or {}).get('readback') != 'PARAM_VALUE')):
++                        raise Refused('PREFLIGHT_INCOMPLETE')
++                    self.t0 = now
++                    self.hard = now + self.hard_seconds
++                elif op == 'S3_RENEW':
++                    phase = payload['phase']
++                    elapsed = 0 if self.t0 is None else now - self.t0
++                    if phase == 'B' and elapsed < 30 or phase == 'C' and elapsed < 90:
++                        raise Refused('PHASE_TOO_EARLY')
++                    if phase not in ('A', 'B', 'C') or 'ABC'.index(phase) not in ('ABC'.index(self.phase), 'ABC'.index(self.phase) + 1):
++                        raise Refused('PHASE_REFUSED')
++                    seq = payload['seq']
++                    if type(seq) is not int or seq != self.renew_seq + 1:
++                        raise Refused('RENEW_SEQUENCE_REFUSED')
++                    self.renew_seq = seq
++                    self.phase = phase
++                    self.until = min(now + self.idle, self.hard)
++                    self.trace.push('lease_renew', phase=phase, idle_end=self.until)
++                else:
++                    if self.pending is not None:
++                        raise Refused('ACTION_BUSY')
++                    if op == 'S3_LOG_ON' and self.phase == 'A' and not self.log_dirty:
++                        if self.old['log_disarmed'] != 1:
++                            self.log_dirty = True
++                            self.pending = Pending('log', 1, now + 2)
++                    elif op == 'S3_SRC2' and self.phase == 'C' and not self.src_dirty:
++                        if self.old['source'] != 2:
++                            self.src_dirty = True
++                            self.pending = Pending('src', 2, now + 2)
++                    else:
++                        raise Refused('ACTION_REFUSED')
++            return self.status()
++
++    def status(self):
++        with self.lock:
++            return dict(stopped=self.stopped, tx_barrier=self.stopped and not self.write_active and not self.write_fault,
++                    driver_empty=self.driver_empty, writes=self.writes, bytes_written=self.bytes_written, last_write=self.last_write,
++                    stopped_at=self.ended_at, trace_failed=self.trace.failed,
++                    trace_dropped=self.trace.dropped, phase=self.phase, hard_end=self.hard,
++                    action=self.last_action, restored=self.restoring and not self.restore_failed
++                    and not self.log_dirty and not self.src_dirty and self.pending is None,
++                    restore_failed=self.restore_failed or self.journal_error or (self.store is not None and self.store.failed))
++
++    def archive_rollback(self, restored_profile):
++        with self.lock:
++            if (self.store is None or self.old is None or not self.status()['restored']
++                    or restored_profile != self.store.profile or self.profile_verifier is None
++                    or self.profile_verifier(restored_profile) is not True):
++                raise Refused('ROLLBACK_NOT_INDEPENDENTLY_CONFIRMED')
++            if self.store.failed:
++                raise Refused('JOURNAL_WRITE_FAILED')
++            self.store.note(self.confirmed, 'COMPLETED')
++
++
++    def link_lost(self):
++        with self.lock:
++            self._stop('OWNER_LINK_LOST')
++
++    def can_tick(self):
++        with self.lock:
++            self._expire()
++            if not self.stopped and self.phase in ('B', 'C') and self.source_reader is not None:
++                source = self.source_reader()
++                if self.phase == 'B' and source != self.old['source']:
++                    self._stop('BASELINE_SRC_LOST')
++                elif self.phase == 'C' and source not in (None, self.old['source'], 2):
++                    self._stop('UNEXPECTED_SRC')
++            return not self.stopped and self.phase in ('B', 'C')
++
++    def write_tx(self, writer, fd, packet):
++        # Reserve exactly one syscall before releasing the state lock. The stop
++        # reply can close the gate immediately but cannot confirm an in-flight write.
++        with self.lock:
++            if not self.can_tick() or self.write_active:
++                raise OSError('diagnostic lease closed or write in progress')
++            if not self.trace.push('packet', direction='TX_VPE_INTENT', raw=packet.hex()):
++                self._stop('TRACE_LOST')
++                raise OSError('trace unhealthy')
++            self.write_active = True
++            self.driver_empty = False
++        try:
++            n = writer(fd, packet)
++            with self.lock:
++                self.last_write = self.clock()
++                self.bytes_written += n
++                self.writes += 1
++                if n != len(packet):
++                    raise OSError('partial serial write')
++                if not self.trace.push('packet', direction='TX', raw=packet.hex(), count=n,
++                                       message_id=102, sysid=packet[5] if len(packet) > 6 else None,
++                                       compid=packet[6] if len(packet) > 6 else None,
++                                       usec=int.from_bytes(packet[10:18], 'little')
++                                       if packet[:1] == b'\xfd' and len(packet) >= 18 else None):
++                    raise OSError('TX trace lost')
++            return n
++        except BaseException:
++            with self.lock:
++                self.write_fault = True
++                self._stop('SERIAL_OR_TRACE_WRITE_FAULT')
++            raise
++        finally:
++            with self.lock:
++                self.write_active = False
++
++    def observe(self, message):
++        with self.lock:
++            if self.token is None:
++                return
++            kind = message.get_type()
++            if kind in {'HEARTBEAT', 'COMMAND_ACK', 'EKF_STATUS_REPORT', 'LOCAL_POSITION_NED',
++                        'GPS_GLOBAL_ORIGIN', 'HOME_POSITION', 'PARAM_VALUE', 'SYSTEM_TIME',
++                        'ATTITUDE', 'STATUSTEXT', 'TIMESYNC'}:
++                self.trace.push('packet', direction='RX', message_id=message.get_msgId(),
++                                sysid=message.get_srcSystem(), compid=message.get_srcComponent(),
++                                raw=bytes(message.get_msgbuf()).hex(), fields=message.to_dict())
++            if (message.get_srcSystem(), message.get_srcComponent()) != (1, 1):
++                return
++            p = self.pending
++            if p is None or not p.sent or self.clock() >= p.deadline:
++                return
++            if p.kind == 'log' and kind == 'PARAM_VALUE' and message.param_id == 'LOG_DISARMED' and p.read_requested:
++                if message.param_value == p.value:
++                    self._completed('PARAM_VALUE')
++            if p.kind == 'src' and kind == 'COMMAND_ACK' and message.command == 42007 and (
++                    message.target_system, message.target_component) in ((255, 190),):
++                if p.ack is None:
++                    p.ack = 'ACCEPTED' if message.result == 0 else 'REJECTED'
++                    self.trace.push('src_ack', disposition=p.ack)
++                    if p.ack != 'ACCEPTED':
++                        self._stop('SRC_ACK_REJECTED')
++
++    def _completed(self, evidence):
++        p = self.pending
++        self.last_action = dict(kind=p.kind, value=p.value, readback=evidence, ack=p.ack)
++        self.trace.push('action_readback', **self.last_action)
++        if self.store is not None:
++            self.confirmed.append(dict(self.last_action, restoring=self.restoring))
++            # Durably planned before first mutation; confirmations are queued.
++            self.store.note(self.confirmed, 'RESTORING' if self.restoring else 'PENDING')
++
++        if self.restoring and p.kind == 'log' and p.value == self.old['log_disarmed']:
++            self.log_dirty = False
++        if self.restoring and p.kind == 'src' and p.value == self.old['source']:
++            self.src_dirty = False
++        self.pending = None
++
++    def tick(self, fd):
++        with self.lock:
++            self._expire()
++            if self.stopped and not self.write_active and not self.driver_empty and not self.write_fault:
++                try:
++                    self.driver_empty = self.driver_queue_empty(fd) is True
++                except OSError:
++                    self.write_fault = True
++            if (self.stopped and not self.write_active and self.driver_empty and not self.write_fault
++                    and self.pending is None and (self.src_dirty or self.log_dirty)
++                    and self.restore_eligible()):
++                self.restoring = True
++            now = self.clock()
++            p = self.pending
++            if p is not None:
++                if p.sent and p.kind == 'src' and p.ack == 'ACCEPTED' and now < p.deadline:
++                    if self.source_reader is not None and self.source_reader() == p.value:
++                        self._completed('INDEPENDENT_SRC')
++                        return
++                if now >= p.deadline or (self.stopped and not self.restoring):
++                    self.last_action = dict(kind=p.kind, value=p.value, readback=None, ack=p.ack)
++                    self.pending = None
++                    self._stop('DIAGNOSTIC_READBACK_MISSING')
++                    if self.restoring:
++                        self.restore_failed = True
++                    return
++                if not p.sent or (p.kind == 'log' and not p.read_requested):
++                    if not (self.restore_eligible() if self.restoring else self.guard()):
++                        self._stop('ACTION_GUARD_FAILED')
++                        self.restore_failed |= self.restoring
++                        return
++                    try:
++                        if not p.sent:
++                            self.action(fd, p.kind, p.value)
++                            p.sent = True
++                        else:
++                            self.action(fd, 'log_read', p.value)
++                            p.read_requested = True
++                    except OSError:
++                        self._stop('ACTION_WRITE_FAILED')
++                        self.restore_failed |= self.restoring
++                        self.pending = None
++                return
++            if self.restoring and not self.restore_failed and self.restore_eligible():
++                if self.src_dirty:
++                    self.pending = Pending('src', self.old['source'], now + 2)
++                elif self.log_dirty:
++                    self.pending = Pending('log', self.old['log_disarmed'], now + 2)
++
+--- /dev/null
++++ b/disarm_control/stage3_baseline.py
+@@ -0,0 +1,140 @@
++"""Durable, fail-closed journal for a single diagnostic owner session."""
++import hashlib
++import fcntl
++import hmac
++import json
++import os
++from pathlib import Path
++import secrets
++import queue
++import threading
++import stat
++import time
++
++
++def encoded(value):
++    return json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
++
++
++class BaselineStore:
++    def __init__(self, path, profile):
++        self.path = Path(path)
++        self.profile = profile
++        self.record = None
++        self.blocked = True
++        self.failed = False
++        self.updates = queue.Queue(32)
++        self.worker = None
++        try:
++            parent = self.path.parent.lstat()
++            if not stat.S_ISDIR(parent.st_mode) or parent.st_uid != os.getuid() or parent.st_mode & 0o077:
++                return
++            with os.fdopen(os.open(self.path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), 'rb') as f:
++                st = os.fstat(f.fileno())
++                if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid() or st.st_nlink != 1 or st.st_mode & 0o077:
++                    return
++                envelope = json.loads(f.read(16385))
++            r = envelope['record']
++            if (not hmac.compare_digest(envelope['sha256'], hashlib.sha256(encoded(r)).hexdigest())
++                    or r['version'] != 1 or r['rollback'] not in ('PENDING', 'RESTORING', 'COMPLETED')
++                    or not r['session'] or not r['profile'] or r['baseline']['source'] not in (1, 2, 3)
++                    or r['baseline']['log_disarmed'] not in (0, 1, 2, 3)
++                    or r['planned'] != ['LOG_DISARMED', 'SRC']
++                    or not isinstance(r['confirmed'], list) or not isinstance(r['updated_utc_ns'], int)):
++                return
++            self.record = r
++            self.blocked = r['rollback'] != 'COMPLETED'
++        except (OSError, ValueError, KeyError, TypeError):
++            # Including a missing journal: explicit provisioning is required.
++            pass
++
++    @classmethod
++    def provision(cls, path, profile, baseline):
++        """Offline/install-time initialization with independently captured baseline."""
++        store = cls(path, profile)
++        if store.path.exists() or store.path.is_symlink():
++            raise FileExistsError(path)
++        if not profile or baseline.get('source') not in (1, 2, 3) or baseline.get('log_disarmed') not in (0, 1, 2, 3):
++            raise ValueError('unverified initial baseline')
++        parent = store.path.parent.lstat()
++        if not stat.S_ISDIR(parent.st_mode) or parent.st_uid != os.getuid() or parent.st_mode & 0o077:
++            raise PermissionError('private owned directory required')
++        store._save(store._new('provisioned', baseline, 'COMPLETED'), create=True)
++        return cls(path, profile)
++
++    def _new(self, session, baseline, state):
++        return dict(version=1, session=session, profile=self.profile, baseline=dict(baseline),
++                    planned=['LOG_DISARMED', 'SRC'], confirmed=[], rollback=state,
++                    created_utc_ns=time.time_ns(), created_monotonic_ns=time.monotonic_ns())
++
++    def _save(self, record, *, create=False):
++        record = dict(record, updated_utc_ns=time.time_ns(), updated_monotonic_ns=time.monotonic_ns())
++        path = self.path.with_name(f'.{self.path.name}.{secrets.token_hex(8)}')
++        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
++        try:
++            with os.fdopen(fd, 'wb') as f:
++                f.write(encoded(dict(record=record, sha256=hashlib.sha256(encoded(record)).hexdigest())))
++                f.flush()
++                os.fsync(f.fileno())
++            if create:
++                os.link(path, self.path)
++            else:
++                os.replace(path, self.path)
++            parent_fd = os.open(self.path.parent, os.O_DIRECTORY | os.O_NOFOLLOW)
++            try:
++                os.fsync(parent_fd)
++            finally:
++                os.close(parent_fd)
++            if create:
++                path.unlink()
++                parent_fd = os.open(self.path.parent, os.O_DIRECTORY | os.O_NOFOLLOW)
++                try:
++                    os.fsync(parent_fd)
++                finally:
++                    os.close(parent_fd)
++            self.record = record
++        finally:
++            path.unlink(missing_ok=True)
++
++    def start(self, session, baseline):
++        if self.blocked or not self.profile:
++            raise RuntimeError('rollback journal missing, damaged or unfinished')
++        lock_path = self.path.with_name(self.path.name + '.lock')
++        lock_fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
++        try:
++            st = os.fstat(lock_fd)
++            if not stat.S_ISREG(st.st_mode) or st.st_uid != os.getuid() or st.st_nlink != 1 or st.st_mode & 0o077:
++                raise PermissionError('invalid journal locking file')
++            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
++            if BaselineStore(self.path, self.profile).blocked:
++                raise RuntimeError('rollback journal became unavailable')
++            self.blocked = True
++            self._save(self._new(session, baseline, 'PENDING'))
++        finally:
++            os.close(lock_fd)
++        self.worker = threading.Thread(target=self._drain, daemon=True)
++        self.worker.start()
++
++    def note(self, confirmed, state):
++        try:
++            self.updates.put_nowait((list(confirmed), state))
++        except queue.Full:
++            self.failed = True
++
++    def _drain(self):
++        while True:
++            item = self.updates.get()
++            try:
++                if item is None:
++                    return
++                if not self.failed:
++                    self.checkpoint(*item)
++            except (OSError, ValueError, RuntimeError):
++                self.failed = True
++            finally:
++                self.updates.task_done()
++
++    def checkpoint(self, confirmed, state):
++        if self.record is None or self.record['rollback'] == 'COMPLETED':
++            raise RuntimeError('no unfinished session')
++        self._save(dict(self.record, confirmed=list(confirmed), rollback=state))
+--- a/owner/stop_latch_test/diagnostics.py
++++ b/owner/stop_latch_test/diagnostics.py
+@@ -283,7 +283,8 @@
+                     self.rc['received_unix_s'] = time.time()
+             elif k=='SYS_STATUS':
+                 self.sys=dict(at=now,present=int(msg.onboard_control_sensors_present),enabled=int(msg.onboard_control_sensors_enabled),health=int(msg.onboard_control_sensors_health))
+-            elif k=='PARAM_VALUE' and (str(msg.param_id) in PARAMS or
++            elif k=='PARAM_VALUE' and ((str(msg.param_id) == 'LOG_DISARMED' and 'LOG_DISARMED' in self.attempted) or
++                                      str(msg.param_id) in PARAMS or
+                                       (str(msg.param_id) in BRAKE_PARAMS + MANUAL_READBACK + CH8_READBACK + NAVIGATION_READBACK and str(msg.param_id) in self.attempted)):
+                 value=float(msg.param_value)
+                 if math.isfinite(value):self.params[str(msg.param_id)]=dict(value=value,at=now)
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -55,8 +55,15 @@
+     pwm.add_argument('--observe-brake-pwm', action='store_true')
+     pwm.add_argument('--brake-pwm-interval-us', type=int, choices=(500000, 0, -1),
+                      help='Observe outputs and opt into one telemetry-only interval request')
++    parser.add_argument('--stage3-trace', help='Isolated diagnostic profile; requires reviewed source provider')
++    parser.add_argument('--stage3-baseline')
+     args = parser.parse_args(argv)
+-    if args.nav_mission_tx and (args.nav_bench_tx or not args.dynamic_mission_profile):
++    if bool(args.stage3_trace) != bool(args.stage3_baseline):
++        parser.error('Stage 3 requires a private rollback baseline')
++    if args.stage3_trace and (not args.nav_mission_tx or args.dynamic_mission_profile
++                             or args.local_ekf_bench_action or args.web_arm_boot_id):
++        parser.error('Stage 3 requires its dedicated planar profile without mission or ARM')
++    if args.nav_mission_tx and (args.nav_bench_tx or not (args.dynamic_mission_profile or args.stage3_trace)):
+         parser.error('NAV_MISSION_TX requires mission storage and excludes the short bench TX profile')
+     planar_tx = args.nav_bench_tx or args.nav_mission_tx
+     pwm_enabled = args.observe_brake_pwm or args.brake_pwm_interval_us is not None
+@@ -113,7 +120,9 @@
+     return args
+ 
+ 
+-def main(*, interlock_io=None, native_interlock=None):
++def main(*, interlock_io=None, native_interlock=None,
++         stage3_source_provider=None, stage3_recording_provider=None,
++         stage3_isolation_provider=None, stage3_original_profile=None):
+     if interlock_io is not None and native_interlock is not None:
+         raise ValueError('Supply only one verified hardware interlock provider')
+     args = parse_args()
+@@ -160,6 +169,7 @@
+     mode_change = None
+     mission = None
+     arm = None
++    stage3 = None
+     if args.web_disarm_socket:
+         from disarm_control.engine import DisarmEngine, disarm_sender
+         from disarm_control.ipc import BRAKE_OPERATIONS, MISSION_OPERATIONS, OwnerServer, SocketPolicy
+@@ -171,6 +181,8 @@
+         def observe(message):
+             guarded.observe(message)
+             diagnostics.observe(message)
++            if stage3 is not None:
++                stage3.observe(message)
+             if mission is not None:
+                 mission.observe(message)
+         reader.command_observer = observe
+@@ -260,6 +272,84 @@
+                 PlanarTXRejected, alignment_record, require_planar_heartbeat, static_planar_message,
+             )
+             initial_alignment = None
++            if args.stage3_trace:
++                from disarm_control.stage3 import Stage3, Trace
++                from disarm_control.stage3_baseline import BaselineStore
++
++                def diagnostic_guard():
++                    now = reader.clock()
++                    state = production.core.snapshot()
++                    try:
++                        hb = require_planar_heartbeat(reader, now, operational=True)
++                    except PlanarTXRejected:
++                        return False
++                    origin = diagnostics.origin or {}
++                    return (stage3_isolation_provider is not None
++                            and stage3_isolation_provider() is True
++                            and hb.custom_mode == 4 and not hb.base_mode & 128
++                            and brake is not None and brake.hold_only
++                            and os.path.isfile(args.inhibit_file) and guarded.policy.blocked()
++                            and not production.storage_fault and not state.reasons and state.stop_latch
++                            and not bench.disarm_pending()
++                            and tuple(origin.get(k) for k in
++                                ('latitude_deg', 'longitude_deg', 'altitude_msl_m')) == (45, 15, 0))
++
++                def diagnostic_baseline():
++                    # No default provider on this firmware/profile. No fallback to ACK.
++                    if stage3_source_provider is None:
++                        return None
++                    src = stage3_source_provider()
++                    entry = diagnostics.params.get('LOG_DISARMED', {})
++                    if (type(src) is not int or src not in (1, 2, 3) or
++                            not 0 <= reader.clock() - entry.get('at', float('-inf')) < 2 or
++                            entry.get('value') not in (0, 1, 2, 3)):
++                        return None
++                    return dict(source=src, log_disarmed=int(entry['value']))
++
++                def diagnostic_action(fd, kind, value):
++                    if os.get_blocking(fd):
++                        raise OSError('diagnostic serial descriptor is blocking')
++                    if kind == 'log' and value in (0, 1, 2, 3):
++                        msg = mav.MAVLink_param_set_message(1, 1, b'LOG_DISARMED', value, mav.MAV_PARAM_TYPE_INT8)
++                    elif kind == 'log_read':
++                        msg = mav.MAVLink_param_request_read_message(1, 1, b'LOG_DISARMED', -1)
++                    elif kind == 'src' and value in (1, 2, 3):
++                        msg = mav.MAVLink_command_long_message(1, 1, 42007, 0, value, 0, 0, 0, 0, 0, 0)
++                    else:
++                        raise OSError('unsupported diagnostic action')
++                    packet = msg.pack(encoder)
++                    if os.write(fd, packet) != len(packet):
++                        raise OSError('partial diagnostic serial write')
++                    encoder.seq = (encoder.seq + 1) % 256
++                    stage3.trace.push('packet', direction='TX', message_id=msg.get_msgId(),
++                                      raw=packet.hex(), fields=msg.to_dict())
++
++                def driver_queue_empty(fd):
++                    import array
++                    import fcntl
++                    import termios
++                    pending = array.array('i', [0])
++                    fcntl.ioctl(fd, termios.TIOCOUTQ, pending, True)
++                    return pending[0] == 0
++
++                trace = Trace(args.stage3_trace)
++                atexit.register(trace.close)
++                stage3 = Stage3(clock=reader.clock, trace=trace, baseline=diagnostic_baseline,
++                                guard=diagnostic_guard, action=diagnostic_action,
++                                restore_eligible=diagnostic_guard, driver_queue_empty=driver_queue_empty,
++                                recording_proven=stage3_recording_provider or (lambda: False),
++                                source_reader=stage3_source_provider,
++                                store=BaselineStore(args.stage3_baseline, stage3_original_profile))
++                # Explicit one-shot PARAM_REQUEST_READ through the existing diagnostics queue.
++                diagnostics.queue.appendleft('LOG_DISARMED')
++                writer = nav.write
++
++                def nonblocking_writer(fd, packet):
++                    if os.get_blocking(fd):
++                        raise OSError('diagnostic serial descriptor is blocking')
++                    return writer(fd, packet)
++
++                nav.write = lambda fd, packet: stage3.write_tx(nonblocking_writer, fd, packet)
+ 
+             def static_writer(pose, now):
+                 nonlocal initial_alignment
+@@ -292,13 +382,15 @@
+ 
+             nav.static_writer = static_writer
+             stream_hold = (NavigationHold(reader, nav.snapshot, raw_hold_sender, monitor_stream=True)
+-                           if args.nav_mission_tx else None)
++                           if args.nav_mission_tx and not args.stage3_trace else None)
+ 
+             if stream_hold is not None and mission is not None:
+                 mission.navigation_hold_status = stream_hold.snapshot
+ 
+             def static_owner_lost():
+                 brake.owner_lost()
++                if stage3 is not None:
++                    stage3.link_lost()
+                 nav.revoke_static('OWNER_LINK_LOST')
+                 if stream_hold is not None:
+                     stream_hold.owner_lost()
+@@ -350,9 +442,17 @@
+             diagnostics.tick(fd,command_pending=bench.disarm_pending() or
+                              (arm is not None and arm.active is not None) or
+                              (mode_change is not None and mode_change.writing))
++            if stage3 is not None:
++                stage3.tick(fd)
+             if nav is not None:
+-                nav.tick(fd,command_pending=bench.disarm_pending())
+-                if args.nav_mission_tx:
++                if stage3 is None or stage3.can_tick():
++                    nav.tick(fd,command_pending=bench.disarm_pending())
++                elif stage3.status()['stopped']:
++                    # Keep phase A reusable before the first lease. The serial barrier
++                    # remains authoritative after a session has stopped.
++                    if stage3.token is not None:
++                        nav.revoke_static('STAGE3_STOPPED')
++                if args.nav_mission_tx and stage3 is None:
+                     stream_hold.tick(fd, command_pending=bench.disarm_pending())
+                     if stream_hold.aborted:
+                         nav.revoke_static(stream_hold.reason)
+@@ -371,6 +471,7 @@
+             if mission is not None and not args.nav_mission_tx else
+             ({'MISSION_STATUS': partial(mission.command, 'MISSION_STATUS')} if mission is not None else None),
+             arm_operations={'ARM': arm.request, 'ARM_READY': arm.ready, 'ARM_STATUS': arm.status} if arm else None,
++            stage3_dispatch=stage3.dispatch if stage3 is not None else None,
+             disarm_request=priority_disarm,
+             allowed_uid=args.web_disarm_client_uid,
+             policy=SocketPolicy(os.getuid(), args.web_disarm_client_gid, 0o710, 0o660))
+--- /dev/null
++++ b/stage3_tools/clock_mapping.py
+@@ -0,0 +1,52 @@
++"""Offline clock interval mapping with explicit transport uncertainty."""
++from dataclasses import dataclass
++import math
++
++
++@dataclass(frozen=True)
++class Anchor:
++    boot_pi: str
++    boot_fc: str
++    before_pi: float
++    after_pi: float
++    utc_pi: float  # Clock read at midpoint (or bracket-calibrated equivalent).
++    fc_time_us: int  # Source boot clock, independently tied to DataFlash TimeUS.
++    extra_error_s: float = .001
++
++    def brackets(self):
++        if (not self.boot_pi or not self.boot_fc or self.fc_time_us < 0
++                or not all(math.isfinite(v) for v in (self.before_pi, self.after_pi, self.utc_pi, self.extra_error_s))
++                or not 0 <= self.before_pi <= self.after_pi or self.extra_error_s < 0):
++            raise ValueError('invalid anchor')
++        span = self.after_pi - self.before_pi
++        error = span / 2 + self.extra_error_s
++        if error > .1:
++            raise ValueError('unbounded transport error')
++        pi = (self.before_pi + self.after_pi) / 2
++        return pi, self.fc_time_us / 1e6 - pi, self.utc_pi - pi, error
++
++
++def map_window(t0, t1, anchors, *, rate_error_ppm=100):
++    if (not math.isfinite(rate_error_ppm) or not 0 <= rate_error_ppm <= 1000 or
++            len(anchors) < 2 or not 0 <= t0 < t1):
++        raise ValueError('invalid window')
++    if len({(a.boot_pi, a.boot_fc) for a in anchors}) != 1:
++        raise ValueError('boot epoch changed')
++    ordered = sorted(((a.brackets(), a.fc_time_us) for a in anchors))
++    if ordered[0][0][0] > t0 or ordered[-1][0][0] < t1:
++        raise ValueError('anchors do not bracket test')
++    for (left, lfc), (right, rfc) in zip(ordered, ordered[1:]):
++        drift = (right[0] - left[0]) * rate_error_ppm / 1e6
++        bound = left[3] + right[3] + drift
++        if right[0] <= left[0] or rfc <= lfc or abs(left[1]-right[1]) > bound:
++            raise ValueError('Pixhawk clock discontinuity')
++        if abs(left[2]-right[2]) > bound:
++            raise ValueError('UTC step')
++    def mapped(t):
++        nearest = min((a for a, _ in ordered), key=lambda a: abs(t-a[0]))
++        error = nearest[3] + abs(t-nearest[0]) * rate_error_ppm / 1e6
++        if error > .1:
++            raise ValueError('window uncertainty too large')
++        return dict(pi_monotonic=t, pi_utc=t + nearest[2],
++                    pixhawk_time_us=round((t + nearest[1]) * 1e6), error_s=error)
++    return dict(start=mapped(t0), end=mapped(t1))
+--- /dev/null
++++ b/stage3_tools/dataflash_checks.py
+@@ -0,0 +1,41 @@
++"""Offline preflight proof checks. Never opens the link or requests a live catalog."""
++
++
++def prove_prefix(before, after, identifier, prefix, *, session_ended):
++    if session_ended is not True:
++        raise ValueError('missing LOG_REQUEST_END evidence')
++    if identifier not in after or after[identifier] <= before.get(identifier, 0):
++        raise ValueError('no growth on specified log ID')
++    if not {'FMT', 'XKFS'} <= {row['mavpackettype'] for row in prefix}:
++        raise ValueError('prefix lacks FMT/XKFS')
++    if {r['C'] for r in prefix if r['mavpackettype'] == 'XKFS'} != {0, 1}:
++        raise ValueError('prefix lacks independent core samples')
++    return dict(event='dataflash_proof', id=identifier, size_before=before.get(identifier, 0),
++                size_after=after[identifier], prefix_parsed=True)
++
++
++def join_vpe_visp(owner_trace, dataflash, *, t0, t1):
++    """Join exact one-to-one timestamps; report misses without asserting fusion."""
++    from collections import Counter
++    sent = [row['usec'] for row in owner_trace if row.get('direction') == 'TX'
++            and row.get('message_id') == 102 and type(row.get('usec')) is int
++            and t0 <= row['monotonic'] < t1]
++    seen = Counter(row['RTimeUS'] for row in dataflash if row.get('mavpackettype') == 'VISP')
++    counts = Counter(sent)
++    return dict(tx=len(sent), matched=sum(seen[u] == 1 and counts[u] == 1 for u in sent),
++                unmatched=sum(seen[u] == 0 for u in sent),
++                ambiguous=sum(seen[u] > 1 or counts[u] > 1 for u in sent))
++
++
++def observe_catalog(exchange, guarded, *, test_active):
++    """Pre/post-only transaction. The injected owner exchange owns all I/O."""
++    if test_active or not guarded():
++        raise ValueError('catalog forbidden during test or without guard')
++    try:
++        entries = exchange('LOG_REQUEST_LIST')
++        if not guarded() or type(entries) is not dict:
++            raise ValueError('catalog evidence lost')
++        return entries
++    finally:
++        if exchange('LOG_REQUEST_END') is not True:
++            raise ValueError('LOG_REQUEST_END unconfirmed')
+--- /dev/null
++++ b/stage3_tools/evidence.py
+@@ -0,0 +1,136 @@
++"""Strict offline checks for an exported Stage 3 trace and its DataFlash BIN."""
++import argparse
++from collections import Counter, defaultdict
++import hashlib
++import json
++from pathlib import Path
++
++
++def analyze(trace, messages, *, tail_ok=True):
++    phases = {r['phase']: r for r in trace if r['event'] == 'phase'}
++    results = [r for r in trace if r['event'] == 'result']
++    if len(results) == 1 and (results[0]['status'] == 'FAIL' or results[0]['rollback'] != 'PASS'):
++        return {'status': 'FAIL', 'reason': 'RUN_OR_ROLLBACK_FAILED'}
++    if set(phases) != {'A', 'B', 'C'} or len(results) != 1 or results[0]['phases'] != ['A', 'B', 'C']:
++        return {'status': 'INCONCLUSIVE', 'reason': 'INCOMPLETE_RUN'}
++    a, b, c = (phases[p] for p in 'ABC')
++    if (a['end'] - a['begin'], b['end'] - b['begin'], c['end'] - c['begin']) != (30, 60, 90) or a['end'] != b['begin'] or b['end'] != c['begin']:
++        return {'status': 'INCONCLUSIVE', 'reason': 'PHASE_BOUNDARY_MISMATCH'}
++    if not tail_ok:
++        return {'status': 'INCONCLUSIVE', 'reason': 'BIN_PARTIAL_OR_PARSER_GAP'}
++    catalog = [r for r in trace if r['event'] == 'dataflash_proof']
++    if (len(catalog) != 1 or catalog[0]['id'] != c['log_id']
++            or catalog[0]['size_after'] <= catalog[0]['size_before']
++            or catalog[0].get('prefix_parsed') is not True):
++        return {'status': 'INCONCLUSIVE', 'reason': 'DATAFLASH_IDENTITY_UNPROVEN'}
++    t0, t1 = a['begin'], c['end']
++    anchors = sorted((r for r in trace if r['event'] == 'clock_anchor'), key=lambda r: r['pi_monotonic'])
++    if (len(anchors) < 2 or anchors[0]['pi_monotonic'] > t0
++            or anchors[-1]['pi_monotonic'] < t1
++            or len({r['boot_id'] for r in anchors}) != 1
++            or any(not 0 <= r['uncertainty_s'] <= .1 for r in anchors)):
++        return {'status': 'INCONCLUSIVE', 'reason': 'CLOCK_ANCHORS_MISSING'}
++    offsets = [r['pixhawk_boot_us'] / 1e6 - r['pi_monotonic'] for r in anchors]
++    utc_offsets = [r['pi_utc'] - r['pi_monotonic'] for r in anchors]
++    if (max(offsets) - min(offsets) > .1 or max(utc_offsets) - min(utc_offsets) > .1
++            or any(x['pixhawk_boot_us'] >= y['pixhawk_boot_us'] for x, y in zip(anchors, anchors[1:]))):
++        return {'status': 'INCONCLUSIVE', 'reason': 'CLOCK_DISCONTINUITY'}
++    offset = (offsets[0] + offsets[-1]) / 2
++    by_type = defaultdict(list)
++    for row in messages:
++        if 'TimeUS' in row:
++            by_type[row['mavpackettype']].append(row)
++
++    def interval(rows, begin, end):
++        return [r for r in rows if begin + offset <= r['TimeUS'] / 1e6 < end + offset]
++
++    def covers(rows, begin, end):
++        stamps = sorted(r['TimeUS'] / 1e6 - offset for r in rows)
++        return (bool(stamps) and abs(stamps[0] - begin) <= .5
++                and abs(stamps[-1] - end) <= .5
++                and all(y - x <= .5 for x, y in zip(stamps, stamps[1:])))
++
++    baseline = [r for r in trace if r['event'] == 'sample' and r['phase'] == 'A']
++    if not baseline or baseline[0]['source'] not in (1, 2, 3):
++        return {'status': 'INCONCLUSIVE', 'reason': 'INITIAL_SRC_UNKNOWN'}
++    initial = baseline[0]['source']
++    for msg_type in ('XKFS', 'XKF1', 'XKF2', 'XKF3', 'XKF4'):
++        for phase in 'ABC':
++            begin, end = phases[phase]['begin'], phases[phase]['end']
++            rows = interval(by_type[msg_type], begin, end)
++            if any(not covers([r for r in rows if r['C'] == core], begin, end) for core in (0, 1)):
++                return {'status': 'INCONCLUSIVE', 'reason': f'{msg_type}_{phase}_COVERAGE_GAP'}
++            if msg_type == 'XKFS':
++                for r in rows:
++                    after_grace = r['TimeUS'] / 1e6 >= begin + offset + 5
++                    if phase in 'AB' and r['SS'] != initial - 1:
++                        return {'status': 'FAIL', 'reason': 'INITIAL_SRC_CHANGED'}
++                    if phase == 'C' and after_grace and r['SS'] != 1:
++                        return {'status': 'FAIL', 'reason': 'SRC2_NOT_ACTIVE_IN_DATAFLASH'}
++    if any(r['event'] == 'tx' and r['write_ok'] is True
++           and t0 <= r['pi_monotonic'] < b['begin'] for r in trace):
++        return {'status': 'FAIL', 'reason': 'TX_IN_PHASE_A'}
++    tx = [r for r in trace if r['event'] == 'tx' and r['message'] == 'VISION_POSITION_ESTIMATE'
++          and r['write_ok'] is True and b['begin'] <= r['pi_monotonic'] < t1]
++    if not tx or len(tx) != len({r['usec'] for r in tx}):
++        return {'status': 'INCONCLUSIVE', 'reason': 'TX_PACKET_TRACE_MISSING_OR_AMBIGUOUS'}
++    received = interval(by_type['VISP'], b['begin'], t1)
++    counts = Counter(r['RTimeUS'] for r in received)
++    matched = sum(counts[r['usec']] == 1 for r in tx)
++    if not matched:
++        return {'status': 'INCONCLUSIVE', 'reason': 'NO_UNAMBIGUOUS_VPE_VISP_JOIN'}
++    for phase in ('B', 'C'):
++        begin, end = phases[phase]['begin'], phases[phase]['end']
++        tx_phase = sorted((r for r in tx if begin <= r['pi_monotonic'] < end),
++                          key=lambda r: r['pi_monotonic'])
++        stamps = [begin, *(r['pi_monotonic'] for r in tx_phase), end]
++        if (len(tx_phase) / (end - begin) < 8 or
++                any(y - x > .5 for x, y in zip(stamps, stamps[1:]))):
++            return {'status': 'INCONCLUSIVE', 'reason': f'TX_TRACE_{phase}_GAP'}
++    settled = c['begin'] + 30
++    samples = [r for r in trace if r['event'] == 'sample' and r['phase'] == 'C'
++               and settled <= r['pi_monotonic'] < t1]
++    stamps = [settled, *sorted(r['pi_monotonic'] for r in samples), t1]
++    if (not samples or any(y - x > .5 for x, y in zip(stamps, stamps[1:]))
++            or any(r['flags'] is None for r in samples)):
++        return {'status': 'INCONCLUSIVE', 'reason': 'MISSING_SETTLED_RX'}
++    if not all(type(r['flags']) is int and r['flags'] & 16 and not r['flags'] & (128 | 1024)
++               and r['local_age'] is not None and 0 <= r['local_age'] < 1 for r in samples):
++        return {'status': 'FAIL', 'reason': 'XY_NOT_VALID', 'matched': matched}
++    c_matches = [r for r in tx if settled <= r['pi_monotonic'] < t1
++                 and counts[r['usec']] == 1]
++    if not c_matches or not all(r['aiding'] is True and r.get('aiding_ref') for r in samples):
++        return {'status': 'INCONCLUSIVE', 'reason': 'EXTERNAL_NAV_AIDING_UNPROVEN', 'matched': matched}
++    return {'status': 'PASS', 'reason': 'ALIGNED_SRC2_AIDING_AND_VALID_XY', 'matched': matched,
++            'tx': len(tx), 'visp': len(received)}
++
++
++def read_bin(path):
++    from pymavlink import DFReader
++
++    r = DFReader.DFReader_binary(str(path))
++    messages = []
++    contiguous = True
++    keep = {'XKFS', 'XKF1', 'XKF2', 'XKF3', 'XKF4', 'VISP', 'VISV', 'MSG', 'EV'}
++    while True:
++        start = r.offset
++        m = r.recv_msg()
++        if m is None:
++            break
++        contiguous &= r.offset - start == m.fmt.len
++        if m.get_type() in keep:
++            messages.append(m.to_dict())
++    return messages, contiguous and start == path.stat().st_size
++
++
++if __name__ == '__main__':
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('trace', type=Path)
++    parser.add_argument('bin', type=Path)
++    args = parser.parse_args()
++    trace = [json.loads(line) for line in args.trace.read_text().splitlines()]
++    messages, tail_ok = read_bin(args.bin)
++    with args.bin.open('rb') as handle:
++        digest = hashlib.file_digest(handle, 'sha256').hexdigest()
++    print(json.dumps(dict(analyze(trace, messages, tail_ok=tail_ok), sha256=digest,
++                          bytes=args.bin.stat().st_size, tail_ok=tail_ok), indent=2))
+--- /dev/null
++++ b/stage3_tools/integrated_runner.py
+@@ -0,0 +1,93 @@
++"""Client for the candidate IPC. The CLI is offline-only pending hardware gates."""
++import argparse
++from pathlib import Path
++import uuid
++
++from disarm_control.stage3 import Refused
++
++
++class Stage3Client:
++    def __init__(self, channel, actor):
++        self.channel = channel
++        self.actor = actor
++        self.token = None
++        self.sequence = 0
++
++    def _call(self, op, **fields):
++        payload = dict(fields)
++        if op != 'S3_OPEN':
++            payload['token'] = self.token
++        result = self.channel.call(op, self.actor, uuid.uuid4().hex, payload=payload)
++        if result.get('ok') is not True or type(result.get('command')) is not dict:
++            raise Refused(result.get('error', 'INVALID_REPLY'))
++        return result['command']
++
++    def open(self):
++        reply = self._call('S3_OPEN')
++        self.token = reply['token']
++        return reply
++
++    def call(self, operation, **fields):
++        if operation == 'S3_RENEW':
++            self.sequence += 1
++            fields['seq'] = self.sequence
++        return self._call(operation, **fields)
++
++
++def exercise(client, clock, preflight, observe, *, switch_approved=False):
++    """Three phases over authorized IPC; callbacks supply owner-side evidence."""
++    baseline = client.open()['baseline']
++    report = {'phases': [], 'rollback': 'FAIL', 'status': 'INCONCLUSIVE'}
++    try:
++        preflight(client, baseline)
++        client.call('S3_START')
++        t0 = clock.monotonic()
++        for phase, start, end in [('A', 0, 30), ('B', 30, 90), ('C', 90, 180)]:
++            switched = False
++            while clock.monotonic() < t0 + end:
++                snapshot = client.call('S3_RENEW', phase=phase)
++                if snapshot['stopped']:
++                    raise Refused('OWNER_STOPPED')
++                if phase == 'C' and baseline['source'] != 2 and not switched:
++                    if not switch_approved:
++                        raise Refused('SRC2_NOT_APPROVED')
++                    client.call('S3_SRC2')
++                    switched = True
++                observe(phase, snapshot)
++                clock.sleep(min(.1, max(0, t0 + end - clock.monotonic())))
++            report['phases'].append(phase)
++    except (Exception, KeyboardInterrupt) as exc:
++        report.update(status='FAIL', error=str(exc))
++    finally:
++        try:
++            receipt = client.call('S3_STOP')
++            for _ in range(20):
++                if receipt['tx_barrier'] and receipt['driver_empty']:
++                    break
++                clock.sleep(.05)
++                receipt = client.call('S3_STATUS')
++            else:
++                raise Refused('TX_STOP_UNCONFIRMED')
++            client.call('S3_RESTORE')
++            for _ in range(100):
++                receipt = client.call('S3_STATUS')
++                if receipt['restore_failed']:
++                    raise Refused('READBACK_RESTORE_FAILED')
++                if receipt['restored']:
++                    report['rollback'] = 'PASS'
++                    break
++                clock.sleep(.05)
++            else:
++                raise Refused('RESTORE_TIMEOUT')
++        except (Exception, KeyboardInterrupt) as exc:
++            report.update(status='FAIL', rollback_error=str(exc))
++    return report
++
++
++if __name__ == '__main__':
++    parser = argparse.ArgumentParser()
++    parser.add_argument('action', choices=('check', 'preflight', 'retest'))
++    args = parser.parse_args()
++    if args.action != 'check':
++        parser.exit(2, 'LIVE_DISABLED: independently proven SRC and recording integration required\n')
++    print(f'Candidate only: {Path(__file__).resolve()}')

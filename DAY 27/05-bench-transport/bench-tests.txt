@@ -1,0 +1,13 @@
+test_lua_on_mock_firmware_api (test_bench.ClockTests.test_lua_on_mock_firmware_api) ... ok
+test_nonce_target_delay_and_source_replay (test_bench.ClockTests.test_nonce_target_delay_and_source_replay) ... ok
+test_utc_step_and_fc_boot_reset_fail_closed (test_bench.ClockTests.test_utc_step_and_fc_boot_reset_fail_closed) ... ok
+test_authorized_order_and_durable_completion (test_bench.RecoveryTests.test_authorized_order_and_durable_completion) ... ok
+test_failed_profile_stays_unfinished (test_bench.RecoveryTests.test_failed_profile_stays_unfinished) ... ok
+test_unauthorized_unsafe_unknown_src (test_bench.RecoveryTests.test_unauthorized_unsafe_unknown_src) ... ok
+test_catalog_and_end_and_explicit_prefix (test_bench.TransferTests.test_catalog_and_end_and_explicit_prefix) ... ok
+test_conflict_guard_loss_owes_end_before_reuse (test_bench.TransferTests.test_conflict_guard_loss_owes_end_before_reuse) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.013s
+
+OK

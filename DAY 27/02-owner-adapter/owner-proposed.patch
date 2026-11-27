@@ -1,0 +1,127 @@
+--- a/hold_only_reconnect/package/owner/stop_latch_test/hold_runner.py
++++ b/hold_only_reconnect/package/owner/stop_latch_test/hold_runner.py
+@@ -24,6 +24,8 @@
+     group.add_argument('--externalnav-tx',action='store_true')
+     parser.add_argument('--nav-bench-tx', action='store_true',
+                         help='Opt in to bounded planar TX with HOLD-only and a verified alignment record')
++    parser.add_argument('--stage3-client-lease', action='store_true',
++                        help='Fail-closed gate for a temporary diagnostic owner')
+     parser.add_argument('--nav-operational-tx', '--nav-mission-tx', dest='nav_mission_tx', action='store_true',
+                         help='Sustained planar ExternalNav in an isolated HOLD-only session; mission readback status only')
+     parser.add_argument('--local-ekf-bench-action', choices=('origin', 'src2', 'home'),
+@@ -255,7 +257,13 @@
+                     os.close(fd)
+ 
+             diagnostics.configure_local_ekf(args.local_ekf_bench_action, local_ekf_safe, claim_local_ekf_action)
++        if args.stage3_client_lease and not planar_tx:
++            raise RuntimeError('Stage 3 client lease requires planar TX profile')
++        stage3_lease = None
+         if planar_tx:
++            if args.stage3_client_lease:
++                from stop_latch_test.stage3_lease import Stage3Lease
++                stage3_lease = Stage3Lease(reader.clock)
+             from stop_latch_test.externalnav import (
+                 PlanarTXRejected, alignment_record, require_planar_heartbeat, static_planar_message,
+             )
+@@ -263,6 +271,8 @@
+ 
+             def static_writer(pose, now):
+                 nonlocal initial_alignment
++                if stage3_lease is not None and not stage3_lease.permits():
++                    return None
+                 stop_state = production.core.snapshot()
+                 heartbeat = require_planar_heartbeat(reader, now, operational=args.nav_mission_tx)
+                 if heartbeat.custom_mode != 4:
+@@ -299,6 +309,8 @@
+ 
+             def static_owner_lost():
+                 brake.owner_lost()
++                if stage3_lease is not None:
++                    stage3_lease.revoke()
+                 nav.revoke_static('OWNER_LINK_LOST')
+                 if stream_hold is not None:
+                     stream_hold.owner_lost()
+@@ -351,7 +363,10 @@
+                              (arm is not None and arm.active is not None) or
+                              (mode_change is not None and mode_change.writing))
+             if nav is not None:
+-                nav.tick(fd,command_pending=bench.disarm_pending())
++                if stage3_lease is None or stage3_lease.permits():
++                    nav.tick(fd,command_pending=bench.disarm_pending())
++                elif stage3_lease.expired_or_revoked():
++                    nav.revoke_static('STAGE3_CLIENT_LEASE_ENDED')
+                 if args.nav_mission_tx:
+                     stream_hold.tick(fd, command_pending=bench.disarm_pending())
+                     if stream_hold.aborted:
+--- a/hold_only_reconnect/package/owner/stop_latch_test/diagnostics.py
++++ b/hold_only_reconnect/package/owner/stop_latch_test/diagnostics.py
+@@ -47,7 +47,7 @@
+ NAVIGATION_READBACK = MODE_READBACK + ('AHRS_EKF_TYPE', 'EK3_ENABLE', 'VISO_TYPE', 'VISO_POS_X',
+                        'VISO_POS_Y', 'VISO_POS_Z', 'VISO_DELAY_MS', 'VISO_QUAL_MIN',
+                        'EK3_SRC_OPTIONS', 'GPS_GLOBAL_ORIGIN', 'HOME_POSITION',
+-                       'AHRS_OPTIONS', 'AHRS_ORIGIN_LAT', 'AHRS_ORIGIN_LON', 'AHRS_ORIGIN_ALT') + tuple(
++                       'LOG_DISARMED', 'AHRS_OPTIONS', 'AHRS_ORIGIN_LAT', 'AHRS_ORIGIN_LON', 'AHRS_ORIGIN_ALT') + tuple(
+     f'EK3_SRC{source}_{field}' for source in (1, 2, 3)
+     for field in ('POSXY', 'VELXY', 'POSZ', 'VELZ', 'YAW')) + DRIVE_PATH_READBACK
+ 
+--- /dev/null
++++ b/hold_only_reconnect/package/owner/stop_latch_test/stage3_lease.py
+@@ -0,0 +1,58 @@
++"""Proposed owner-local deadline gate for a reviewed diagnostic profile."""
++from threading import Lock
++import math
++
++
++class Stage3Lease:
++    """Single-use lease. A timeout revokes it permanently, including late renewals."""
++    def __init__(self, clock, *, idle_s=.75):
++        if not 0 < idle_s <= 1:
++            raise ValueError('invalid idle timeout')
++        self.clock = clock
++        self.idle_s = idle_s
++        self.lock = Lock()
++        self.client = None
++        self.hard_end = None
++        self.idle_end = None
++        self.closed = False
++
++    def _valid(self, now):
++        if self.closed or self.client is None:
++            return False
++        if now >= min(self.hard_end, self.idle_end):
++            self.closed = True
++            return False
++        return True
++
++    def open(self, client, end):
++        # Caller must bind client to an authenticated peer and check all owner guards.
++        with self.lock:
++            now = self.clock()
++            if (self.closed or self.client is not None or not client
++                    or not math.isfinite(end) or not 0 < end - now <= 150):
++                return False
++            self.client = client
++            self.hard_end = end
++            self.idle_end = min(now + self.idle_s, end)
++            return True
++
++    def renew(self, client):
++        with self.lock:
++            now = self.clock()
++            if not self._valid(now) or client != self.client:
++                return False
++            self.idle_end = min(now + self.idle_s, self.hard_end)
++            return True
++
++    def permits(self):
++        with self.lock:
++            return self._valid(self.clock())
++
++    def expired_or_revoked(self):
++        with self.lock:
++            self._valid(self.clock())
++            return self.closed
++
++    def revoke(self):
++        with self.lock:
++            self.closed = True

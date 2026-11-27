@@ -1,0 +1,7 @@
+# Portable B1/B2 and rollback outline
+
+- **B0.** Physically isolate traction and secure the chassis. Record the single owner, heartbeat, HOLD, DISARMED, inhibit and STOP latch. Back up the exact owner profile and verify the package and baseline SHA256 sums.
+- **B1.** After separate authorization, use the original host-specific deployment helper from the protected package. Use the minimal observe-only overlay. Verify HMI, fresh heartbeat, HOLD, DISARMED, both safety checks, and TX=0. Diagnostic transport, writes and source selection are closed.
+- **B2.** After PASS B1 and separate authorization, use the existing authenticated owner IPC to read the allowlisted parameters and memory report, request a time anchor, read the DataFlash catalog and a bounded explicit-ID prefix. Confirm LOG_REQUEST_END and subsequent logging. Read-only status does not confirm a write or source change. Lua installation, if required, is a separate approved operation with a script backup and rollback.
+- **Rollback.** Restore the original owner profile from its saved baseline. Confirm one owner, healthy HMI and heartbeat, HOLD, DISARMED, inhibit, STOP latch and TX=0. Keep traction isolated if any verification is missing.
+- **B3/B4.** The separate hardware bench plan requires an independent passive analyzer. The full Stage 3 trial remains blocked until transport stop, data coverage, clocks and independently verified source/rollback are established.

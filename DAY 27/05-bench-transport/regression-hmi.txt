@@ -1,0 +1,23 @@
+test_both_missions_complete_without_turn (web_hmi.test_hmi.HMITest.test_both_missions_complete_without_turn) ... ok
+test_clock_fault_and_recovery (web_hmi.test_hmi.HMITest.test_clock_fault_and_recovery) ... ok
+test_concurrent_resume_only_once (web_hmi.test_hmi.HMITest.test_concurrent_resume_only_once) ... ok
+test_concurrent_start_only_once (web_hmi.test_hmi.HMITest.test_concurrent_start_only_once) ... ok
+test_double_resume (web_hmi.test_hmi.HMITest.test_double_resume) ... ok
+test_invalid_transitions (web_hmi.test_hmi.HMITest.test_invalid_transitions) ... ok
+test_malformed_and_get_cannot_command (web_hmi.test_hmi.HMITest.test_malformed_and_get_cannot_command) ... ok
+test_page_reload_and_second_client (web_hmi.test_hmi.HMITest.test_page_reload_and_second_client) ... ok
+test_pause_resume_complete_both_missions (web_hmi.test_hmi.HMITest.test_pause_resume_complete_both_missions) ... ok
+test_pause_stop_resume_forbidden (web_hmi.test_hmi.HMITest.test_pause_stop_resume_forbidden) ... ok
+test_paused_page_reload (web_hmi.test_hmi.HMITest.test_paused_page_reload) ... ok
+test_precheck_is_demo_only (web_hmi.test_hmi.HMITest.test_precheck_is_demo_only) ... ok
+test_protective_states_forbid_resume (web_hmi.test_hmi.HMITest.test_protective_states_forbid_resume) ... ok
+test_repeated_request_does_not_restart (web_hmi.test_hmi.HMITest.test_repeated_request_does_not_restart) ... ok
+test_reset_never_starts (web_hmi.test_hmi.HMITest.test_reset_never_starts) ... ok
+test_resume_requires_pause (web_hmi.test_hmi.HMITest.test_resume_requires_pause) ... ok
+test_stale_commands_rejected (web_hmi.test_hmi.HMITest.test_stale_commands_rejected) ... ok
+test_static_assets (web_hmi.test_hmi.HMITest.test_static_assets) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 13.806s
+
+OK

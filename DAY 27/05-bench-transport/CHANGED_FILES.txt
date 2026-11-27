@@ -1,0 +1,13 @@
+M disarm_control/ipc.py
+A disarm_control/stage3.py
+A disarm_control/stage3_baseline.py
+A disarm_control/stage3_log_transport.py
+A disarm_control/stage3_observers.py
+M owner/stop_latch_test/diagnostics.py
+M owner/stop_latch_test/hold_runner.py
+A stage3_tools/clock_mapping.py
+A stage3_tools/dataflash_checks.py
+A stage3_tools/evidence.py
+A stage3_tools/integrated_runner.py
+A stage3_tools/recover_stage3.py
+A stage3_tools/stage3_src_observer.lua
