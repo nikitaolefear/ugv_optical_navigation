@@ -71,6 +71,7 @@ dca889a265a09cbadf65977bacaf456681a5e09fd4d92c4bd252dda3a381b961  ./06-operator/
 c7a7fe044370f21285a12851d667eb81e00056acbd0287e1b8037dc52aba5f5a  ./06-operator/b2-log-overlay/DISCOVERY-LIVE-RESULT.md
 adaaaf364529beaf625bf8508e63d5ae65340ce2bfedb9d334cc3c71a71fe677  ./06-operator/b2-log-overlay/LOG-DISARMED-INDEX-READBACK.md
 5837676a479c1790477a257ae42d65e8b0c801868d2c3852a4b34a5a77daa368  ./06-operator/b2-log-overlay/OPERATOR.md
+58292afb79fe810f6b74117d495e9c9474ef32a086233152345da20306839b53  ./06-operator/b2-log-overlay/PACED-DISCOVERY-LIVE-RESULT.md
 d6b374dcfd2321f892778d19b228c699e13eb570e8348d867ecd3c706e2d7ddc  ./06-operator/b2-log-overlay/PROCEDURE.md
 e17bed5a5a4fc95d5e0ebebe4d7afde121cbdbfa52076cffb239eff126fa2ada  ./06-operator/b2-log-overlay/PWM-DISCOVERY-ANALYSIS.md
 16d5ca98d36a2928f4d8f72445981eccf024626d3b5872708c4fb02f756fd483  ./06-operator/b2-log-overlay/SHA256SUMS
