@@ -1,0 +1,550 @@
+--- a/disarm_control/ipc.py
++++ b/disarm_control/ipc.py
+@@ -16,7 +16,9 @@
+ from .stage3 import Refused
+ from .stage3_operator import OPS
+ 
+-STAGE3_OPERATIONS = OPS
++from .log_queue import OPS as LOG_OPS
++
++STAGE3_OPERATIONS = OPS | LOG_OPS
+ 
+ LIMIT = 4096
+ MISSION_STATUS_REPLY_LIMIT = 8192
+@@ -126,9 +128,10 @@
+ 
+ class OwnerServer:
+     """Explicit start only, one bounded request at a time, no unlink-on-start."""
+-    def __init__(self, engine, path, *, allowed_uid=None, policy=None, stop_operations=None, arm_operations=None, disarm_request=None, brake_operations=None, mission_operations=None, stage3_dispatch=None):
++    def __init__(self, engine, path, *, allowed_uid=None, policy=None, stop_operations=None, arm_operations=None, disarm_request=None, brake_operations=None, mission_operations=None, stage3_dispatch=None, log_enabled=False):
+         self.engine, self.path = engine, Path(path)
+         self.stage3_dispatch = stage3_dispatch
++        self.stage3_operations = STAGE3_OPERATIONS if log_enabled else OPS
+         self.stop_operations = stop_operations or {}
+         self.arm_operations = arm_operations or {}
+         if set(self.arm_operations) - {'ARM', 'ARM_READY', 'ARM_STATUS'}:
+@@ -166,7 +169,7 @@
+                     operation = body.get('op')
+                     mission = type(operation) is str and operation in owner.mission_operations
+                     stage3 = (owner.stage3_dispatch is not None and type(operation) is str
+-                              and operation in STAGE3_OPERATIONS)
++                              and operation in owner.stage3_operations)
+                     fields = {'op', 'actor_id', 'actor', 'request_id', 'nonce'}
+                     if mission or stage3:
+                         fields.add('payload')
+--- /dev/null
++++ b/disarm_control/log_disarmed.py
+@@ -0,0 +1,178 @@
++"""Owner-local transaction core. Transport and authorization are injected."""
++from contextlib import contextmanager
++import fcntl
++import hashlib
++import json
++import os
++from pathlib import Path
++import re
++import stat
++import tempfile
++import uuid
++
++PARAMETER = "LOG_DISARMED"
++GUARDS = ("fresh_heartbeat", "hold", "disarmed", "inhibit", "stop_latch",
++          "isolated", "tx_disabled", "tx_zero", "exclusive_owner")
++HEX = re.compile(r"[0-9a-f]{32,64}")
++PHASES = {"enable_intent", "enabled", "restore_intent", "restored"}
++
++
++class Refused(RuntimeError):
++    pass
++
++
++def identity(value):
++    if (type(value) is not dict or set(value) != {"hardware", "pi_boot", "fc_boot", "owner_session"}
++            or any(not isinstance(v, str) or not HEX.fullmatch(v) for v in value.values())):
++        raise Refused("verified hardware and session identity required")
++    return dict(value)
++
++
++class Journal:
++    """One record, atomically updated. Retain completed records until next intent."""
++
++    def __init__(self, directory):
++        self.directory = Path(directory)
++        self.record = self.directory / "log-disarmed.json"
++
++    @contextmanager
++    def lock(self):
++        info = self.directory.lstat()
++        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
++            raise Refused("private persistent journal directory required")
++        lock = self.directory / "log-disarmed.lock"
++        fd = os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
++        try:
++            s = os.fstat(fd)
++            if not stat.S_ISREG(s.st_mode) or s.st_uid != os.getuid() or s.st_nlink != 1 or s.st_mode & 0o077:
++                raise Refused("invalid lock")
++            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
++            yield
++        finally:
++            os.close(fd)
++
++    def load(self):
++        try:
++            fd = os.open(self.record, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
++        except FileNotFoundError:
++            return None
++        with os.fdopen(fd, "rb") as stream:
++            s = os.fstat(stream.fileno())
++            if not stat.S_ISREG(s.st_mode) or s.st_uid != os.getuid() or s.st_nlink != 1 or s.st_mode & 0o077:
++                raise Refused("invalid journal inode")
++            raw = stream.read(4097)
++        if len(raw) > 4096:
++            raise Refused("oversize journal")
++        envelope = json.loads(raw)
++        row = envelope["record"]
++        if (envelope["sha256"] != hashlib.sha256(self.encode(row)).hexdigest()
++                or set(row) != {"transaction", "identity", "baseline", "phase", "last_session"}
++                or row["phase"] not in PHASES or type(row["baseline"]) is not int
++                or row["baseline"] not in (0, 2, 3)
++                or not isinstance(row["transaction"], str) or not HEX.fullmatch(row["transaction"])):
++            raise Refused("invalid journal")
++        identity(row["identity"])
++        identity(row["last_session"])
++        if row["last_session"]["hardware"] != row["identity"]["hardware"]:
++            raise Refused("inconsistent journal hardware")
++        return row
++
++    @staticmethod
++    def encode(data):
++        return json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
++
++    def save(self, row):
++        body = self.encode(dict(record=row, sha256=hashlib.sha256(self.encode(row)).hexdigest()))
++        fd, temporary = tempfile.mkstemp(prefix=".log-disarmed-", dir=self.directory)
++        try:
++            with os.fdopen(fd, "wb") as stream:
++                stream.write(body)
++                stream.flush()
++                os.fsync(stream.fileno())
++            os.replace(temporary, self.record)
++            directory = os.open(self.directory, os.O_DIRECTORY | os.O_RDONLY | os.O_NOFOLLOW)
++            try:
++                os.fsync(directory)
++            finally:
++                os.close(directory)
++        finally:
++            if os.path.lexists(temporary):
++                os.unlink(temporary)
++
++
++class Transaction:
++    """Run away from the Owner telemetry tick, with one checked port.
++
++    Port samples identity and guards from the same owner stream. read_log_disarmed
++    must initiate a new PARAM_REQUEST_READ and wait for its own receive window.
++    write_log_disarmed permits only the fixed PARAM_SET on the Owner link. The
++    injected port calls check on the Owner thread immediately before actual send.
++    Queued work must be cancelled at timeout, never dispatched after expiration.
++    """
++
++    def __init__(self, journal, port, *, gateway_uid, authorized, profile):
++        self.journal, self.port = journal, port
++        self.uid, self.authorized, self.profile = gateway_uid, authorized, profile
++
++    def execute(self, peer, action, request):
++        # peer is from SO_PEERCRED plus process generation, never client JSON.
++        expected = {"begin": set(), "restore": {"transaction"}, "recover": {"transaction"}}
++        if (type(peer) is not tuple or len(peer) != 3 or peer[0] != self.uid
++                or type(request) is not dict or action not in expected
++                or set(request) != expected[action] or self.profile != "B2-LOG"):
++            raise Refused("operation, profile or peer forbidden")
++        with self.journal.lock():
++            current = identity(self.port.identity())
++            row = self.journal.load()
++            transaction = uuid.uuid4().hex if action == "begin" else request["transaction"]
++
++            def guard():
++                state = self.port.safety()
++                if (identity(self.port.identity()) != current
++                        or not self.authorized(peer, action, transaction, current)
++                        or any(state.get(k) is not True for k in GUARDS)):
++                    raise Refused("authorization, session or safety lost")
++
++            def read():
++                guard()
++                value = self.port.read_log_disarmed(guard)
++                guard()
++                if type(value) is not int or value not in (0, 1, 2, 3):
++                    raise Refused("invalid independent readback")
++                return value
++
++            guard()
++            if action == "begin":
++                if row and row["phase"] != "restored":
++                    raise Refused("unfinished journal; explicit recovery required")
++                baseline = read()
++                if baseline == 1:
++                    raise Refused("already enabled; no transaction")
++                row = dict(transaction=transaction, identity=current, last_session=current,
++                           baseline=baseline, phase="enable_intent")
++                self.journal.save(row)
++                guard()
++                self.port.write_log_disarmed(1, guard)
++                if read() != 1:
++                    raise Refused("enable readback mismatch")
++                row["phase"] = "enabled"
++            else:
++                if (not row or row["transaction"] != transaction or row["phase"] == "restored"
++                        or row["identity"]["hardware"] != current["hardware"]):
++                    raise Refused("no matching transaction on this hardware")
++                if action == "restore" and (row["phase"] != "enabled" or current != row["identity"]):
++                    raise Refused("explicit recovery required")
++                baseline = row["baseline"]
++                value = read()
++                if value not in (baseline, 1):
++                    raise Refused("unexpected live value; manual reconciliation required")
++                row.update(phase="restore_intent", last_session=current)
++                self.journal.save(row)
++                if value != baseline:
++                    guard()
++                    self.port.write_log_disarmed(baseline, guard)
++                if read() != baseline:
++                    raise Refused("restore readback mismatch")
++                row["phase"] = "restored"
++            self.journal.save(row)
++            return dict(row)
+--- /dev/null
++++ b/disarm_control/log_queue.py
+@@ -0,0 +1,171 @@
++"""Single-slot handoff to the existing Owner tick. Disk work stays in worker."""
++from hashlib import sha256
++import os
++from pathlib import Path
++import stat
++import threading
++import uuid
++
++from .log_disarmed import Journal, Refused, Transaction
++from .owner_port import LogDisarmedPort
++
++OPS = frozenset({'S3_LOG_STATUS', 'S3_LOG_BEGIN', 'S3_LOG_RESTORE', 'S3_LOG_RECOVER', 'S3_LOG_RESULT'})
++QUIET = .30
++
++
++class LogQueue:
++    def __init__(self, clock, directory, marker, pi_boot, port_path, gateway_uid, root_attested,
++                 peer_alive, safety, param_index):
++        self.clock, self.marker, self.port_path = clock, marker, port_path
++        self.pi_boot, self.root_attested, self.peer_alive = pi_boot.replace('-', ''), root_attested, peer_alive
++        self.safety = safety
++        self.fault = False
++        self.lock = threading.Lock()
++        self.slot = None
++        self.last_param = float('-inf')
++        self.session = uuid.uuid4().hex
++        self.current = {}
++        self.link = None
++        self.fc_time = None
++        self.job = self.peer = self.result = None
++        self.journal = Journal(directory)
++        port = LogDisarmedPort(self.exchange, self.identity, safety, param_index)
++        self.transaction = Transaction(self.journal, port, gateway_uid=gateway_uid,
++                                       authorized=self.authorized, profile='B2-LOG')
++
++    def identity(self):
++        return self.current.copy()
++
++    def authorized(self, peer, action, transaction, current):
++        if not self.peer_alive(peer):
++            return False
++        binding = ' '.join(current[key] for key in ('hardware', 'pi_boot', 'fc_boot', 'owner_session'))
++        return self.root_attested(self.marker, f'B2-LOG {binding} {action} '
++                                  f'{transaction if action != "begin" else "-"}')
++
++    def observe(self, message):
++        if (message.get_srcSystem(), message.get_srcComponent()) != (1, 1):
++            return
++        kind = message.get_type()
++        if kind in ('SYSTEM_TIME', 'ATTITUDE'):
++            value = int(message.time_boot_ms)
++            if self.fc_time is not None and value + 1000 < self.fc_time:
++                self.link = None
++                self.current = {}
++                self.fc_time = None
++            self.fc_time = max(self.fc_time or 0, value)
++        if kind != 'PARAM_VALUE' or message.param_id != 'LOG_DISARMED':
++            return
++        with self.lock:
++            self.last_param = self.clock()
++            slot = self.slot
++            if (slot and not slot['done'].is_set() and slot.get('sent') and self.clock() < slot['expires']
++                    and slot['accept'] is not None and slot['accept'](message)):
++                slot['reply'] = message
++                slot['done'].set()
++
++    def exchange(self, message, check, timeout, accept):
++        done = threading.Event()
++        with self.lock:
++            if self.slot is not None:
++                raise Refused('LOG_QUEUE_BUSY')
++            slot = dict(message=message, check=check, expires=self.clock()+timeout,
++                        accept=accept, done=done)
++            self.slot = slot
++        try:
++            if not done.wait(timeout):
++                with self.lock:
++                    self.fault = True
++                raise TimeoutError('LOG_REQUEST_TIMEOUT')
++            if 'error' in slot:
++                raise slot['error']
++            return slot.get('reply')
++        finally:
++            with self.lock:
++                if self.slot is slot:
++                    self.slot = None
++
++    def tick(self, fd, send, *, connected, epoch, priority_clear):
++        # Serial identity is tied to this Owner descriptor, not to a caller.
++        if not connected:
++            self.current = {}
++            self.link = None
++            self.fc_time = None
++        elif self.link != (fd, epoch) and self.fc_time is not None:
++            try:
++                device = Path(self.port_path)
++                live = device.stat()
++                opened = os.fstat(fd)
++                if not (device.is_symlink() and stat.S_ISCHR(opened.st_mode)
++                        and (live.st_dev, live.st_ino, live.st_rdev) ==
++                            (opened.st_dev, opened.st_ino, opened.st_rdev)):
++                    raise ValueError('link mismatch')
++                hardware = sha256(device.name.encode()).hexdigest()
++                self.current = dict(hardware=hardware, pi_boot=self.pi_boot,
++                                    fc_boot=uuid.uuid4().hex, owner_session=self.session)
++                self.link = (fd, epoch)
++            except (OSError, ValueError):
++                self.current = {}
++        with self.lock:
++            slot = self.slot
++            if not slot or slot['done'].is_set():
++                return
++            now = self.clock()
++            try:
++                if now >= slot['expires'] or not connected:
++                    if slot.get('sent'):
++                        self.fault = True
++                    raise Refused('LOG_REQUEST_EXPIRED_OR_LINK_LOST')
++                if slot.get('sent') or not priority_clear:
++                    return
++                if slot['accept'] is not None and now-self.last_param < QUIET:
++                    return
++                slot['check']()
++                if self.clock() >= slot['expires']:
++                    raise Refused('LOG_REQUEST_EXPIRED')
++                send(slot['message'])
++                slot['sent'] = True
++                self.last_param = self.clock()
++                if slot['accept'] is None:
++                    slot['done'].set()
++            except Exception as error:
++                slot['error'] = error
++                slot['done'].set()
++
++    def status(self, other_job, logs_busy):
++        with self.lock:
++            active, queued = self.job, int(self.slot is not None and not self.slot.get('sent'))
++        try:
++            record = self.journal.load()
++            pending = record if record and record['phase'] != 'restored' else None
++        except (OSError, ValueError, KeyError, TypeError, Refused):
++            pending = {'phase': 'invalid'}
++        return dict(profile='B2-LOG', identity=self.identity(), active=active or other_job,
++                    queued=queued + int(other_job is not None and not logs_busy), transport_fault=self.fault, unfinished=pending and {k: pending.get(k) for k in ('transaction','phase')},
++                    recovery_required=bool(pending) and active is None,
++                    dataflash='ACTIVE_OR_END_OWED' if logs_busy else 'IDLE')
++
++    def dispatch(self, peer, op, payload, *, other_job, logs_busy):
++        if op == 'S3_LOG_STATUS' and not payload:
++            return self.status(other_job, logs_busy)
++        with self.lock:
++            if op == 'S3_LOG_RESULT' and not payload and peer == self.peer:
++                return dict(active=self.job, result=self.result)
++            action = {'S3_LOG_BEGIN':'begin','S3_LOG_RESTORE':'restore','S3_LOG_RECOVER':'recover'}.get(op)
++            fields = set() if action == 'begin' else {'transaction'}
++            if (action is None or set(payload) != fields or self.job or other_job or logs_busy
++                    or self.fault or not self.peer_alive(peer)):
++                raise Refused('LOG_OPERATION_REFUSED')
++            self.job, self.peer, self.result = action, peer, None
++        def run():
++            try:
++                row = self.transaction.execute(peer, action, payload)
++                result = {k:row[k] for k in ('transaction','phase','baseline')}
++            except (Refused, TimeoutError, OSError, ValueError, KeyError, TypeError):
++                result = {'error':'LOG_FAILED_CHECK_STATUS_AND_JOURNAL'}
++            finally:
++                with self.lock:
++                    self.result = locals().get('result', {'error':'LOG_WORKER_INTERRUPTED'})
++                    self.job = None
++        threading.Thread(target=run, daemon=True, name='log-disarmed').start()
++        return {'queued':True}
+--- /dev/null
++++ b/disarm_control/owner_port.py
+@@ -0,0 +1,46 @@
++"""Fixed MAVLink packet builders for a future Owner-local queue adapter."""
++from pymavlink.dialects.v20 import ardupilotmega as mav
++
++from .log_disarmed import PARAMETER, Refused
++
++TARGET = (1, 1)
++WIRE_NAME = PARAMETER.encode("ascii")
++
++
++class LogDisarmedPort:
++    """No connection opener. The existing Owner must implement exchange.
++
++    exchange(message, check, timeout, accept) must run check on the sole
++    Owner thread immediately before sending. With no accept callback it
++    returns after confirmed local write, without treating PARAM_VALUE as ACK.
++    With a callback it returns the first matching message in a fresh receive
++    epoch after dispatch. The Owner must drain or quarantine earlier replies
++    and serialize parameter traffic. Expired work may never be sent.
++    """
++
++    def __init__(self, exchange, identity, safety, param_index):
++        if type(param_index) is not int or not 0 <= param_index <= 32767:
++            raise Refused("verified LOG_DISARMED index required")
++        self.param_index = param_index
++        self.exchange, self.identity, self.safety = exchange, identity, safety
++
++    def read_log_disarmed(self, check):
++        def accept(msg):
++            return (msg.get_type() == "PARAM_VALUE"
++                    and (msg.get_srcSystem(), msg.get_srcComponent()) == TARGET
++                    and msg.param_id == PARAMETER
++                    and msg.param_index == self.param_index
++                    and msg.param_type == mav.MAV_PARAM_TYPE_INT8
++                    and msg.param_value in (0, 1, 2, 3))
++
++        msg = self.exchange(mav.MAVLink_param_request_read_message(*TARGET, WIRE_NAME, self.param_index),
++                            check, 2.0, accept)
++        if msg is None or not accept(msg):
++            raise Refused("fresh LOG_DISARMED readback missing")
++        return int(msg.param_value)
++
++    def write_log_disarmed(self, value, check):
++        if type(value) is not int or value not in (0, 1, 2, 3):
++            raise Refused("invalid LOG_DISARMED value")
++        self.exchange(mav.MAVLink_param_set_message(*TARGET, WIRE_NAME, value, mav.MAV_PARAM_TYPE_INT8),
++                      check, 2.0, None)
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -57,7 +57,17 @@
+     parser.add_argument('--stage3-operator-mode', choices=('B1', 'B2'))
+     parser.add_argument('--stage3-bench-approval-file')
+     parser.add_argument('--stage3-lua-attestation-file')
++    parser.add_argument('--stage3-log-approval-file')
++    parser.add_argument('--stage3-log-journal-directory')
++    parser.add_argument('--stage3-log-param-index', type=int)
+     args = parser.parse_args(argv)
++    if (bool(args.stage3_log_approval_file) != bool(args.stage3_log_journal_directory)
++            or bool(args.stage3_log_approval_file) != (args.stage3_log_param_index is not None)
++            or (args.stage3_log_param_index is not None and not 0 <= args.stage3_log_param_index <= 32767)
++            or (args.stage3_log_approval_file and (args.stage3_operator_mode != 'B2'
++                or args.diagnostic_params or args.diagnostic_brake_params
++                or args.export_pixhawk_params or args.navigation_hold_watchdog))):
++        parser.error('B2-LOG requires B2 and dedicated journal/authorization')
+     if args.stage3_operator_mode and (not args.brake_hold_only or not args.navigation_readback
+             or args.nav_bench_tx or args.nav_mission_tx or args.externalnav_tx
+             or args.web_arm_boot_id or args.local_ekf_bench_action or args.ch6_mode_change
+@@ -173,6 +183,7 @@
+     mission = None
+     arm = None
+     operator = None
++    log_queue = None
+     if args.web_disarm_socket:
+         from disarm_control.engine import DisarmEngine, disarm_sender
+         from disarm_control.ipc import BRAKE_OPERATIONS, MISSION_OPERATIONS, OwnerServer, SocketPolicy
+@@ -186,6 +197,8 @@
+             diagnostics.observe(message)
+             if operator is not None:
+                 operator.observe(message)
++            if log_queue is not None:
++                log_queue.observe(message)
+             if mission is not None:
+                 mission.observe(message)
+         reader.command_observer = observe
+@@ -395,6 +408,53 @@
+             operator = BenchOperator(args.stage3_operator_mode, reader.clock, operator_guard,
+                                      operator_status, pi_boot=pi_boot, provenance=approved_lua)
+ 
++        if args.stage3_log_approval_file:
++            from disarm_control.log_queue import OPS as LOG_OPS, LogQueue
++            from disarm_control.ipc import peer_generation
++            from disarm_control.stage3 import Refused
++            from web_hmi.pixhawk_telemetry import PORT
++
++            def log_peer(peer):
++                uid, pid, generation = peer
++                try:
++                    return uid == args.web_disarm_client_uid and peer_generation(pid) == generation
++                except (OSError, ValueError, IndexError):
++                    return False
++
++            def log_safety():
++                s = operator_status()
++                return dict(fresh_heartbeat=s['heartbeat_age'] is not None and 0 <= s['heartbeat_age'] < 1.5,
++                            hold=s['hold'], disarmed=s['disarmed'], inhibit=s['inhibit'],
++                            stop_latch=s['stop_latch'], isolated=approved_isolation(),
++                            tx_disabled=s['tx_enabled'] is False,
++                            tx_zero=nav.snapshot()['sent'] == 0,
++                            exclusive_owner=s['hold_only'] and reader.state == 'READING')
++
++            log_queue = LogQueue(reader.clock, args.stage3_log_journal_directory,
++                                 args.stage3_log_approval_file, pi_boot, PORT,
++                                 args.web_disarm_client_uid, root_attested, log_peer, log_safety,
++                                 args.stage3_log_param_index)
++
++            def log_send(fd, message):
++                if os.get_blocking(fd):
++                    raise OSError('blocking owner descriptor')
++                packet = message.pack(encoder)
++                if os.write(fd, packet) != len(packet):
++                    raise OSError('partial LOG_DISARMED request')
++                encoder.seq = (encoder.seq + 1) % 256
++
++            def dispatch(peer, op, payload):
++                with operator.lock:
++                    if op in LOG_OPS:
++                        return log_queue.dispatch(peer, op, payload,
++                                                  other_job=operator.job and operator.job['kind'],
++                                                  logs_busy=operator.logs.busy)
++                    if op == 'S3_BENCH_REQUEST' and log_queue.job:
++                        raise Refused('LOG_TRANSACTION_BUSY')
++                    return operator.dispatch(peer, op, payload)
++        else:
++            dispatch = operator.dispatch if operator is not None else None
++
+         def owner_tick(fd):
+             guarded.tick(fd)
+             if brake is not None:
+@@ -414,6 +474,11 @@
+                 operator.tick(lambda op, *fields: operator_send(fd, op, *fields),
+                               connected=reader.state == 'READING' and reader.source == (1, 1),
+                               priority_clear=not bench.disarm_pending())
++            if log_queue is not None:
++                log_queue.tick(fd, lambda m: log_send(fd, m),
++                               connected=reader.state == 'READING' and reader.source == (1, 1),
++                               epoch=reader.heartbeat_safety_serial,
++                               priority_clear=not bench.disarm_pending())
+             if nav is not None:
+                 nav.tick(fd,command_pending=bench.disarm_pending())
+             if mission is not None:
+@@ -430,7 +495,7 @@
+             mission_operations={op: partial(mission.command, op) for op in MISSION_OPERATIONS}
+             if mission is not None else None,
+             arm_operations={'ARM': arm.request, 'ARM_READY': arm.ready, 'ARM_STATUS': arm.status} if arm else None,
+-            stage3_dispatch=operator.dispatch if operator is not None else None,
++            stage3_dispatch=dispatch, log_enabled=log_queue is not None,
+             disarm_request=priority_disarm,
+             allowed_uid=args.web_disarm_client_uid,
+             policy=SocketPolicy(os.getuid(), args.web_disarm_client_gid, 0o710, 0o660))
