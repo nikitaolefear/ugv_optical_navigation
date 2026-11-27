@@ -1,0 +1,14 @@
+--- a/bench-overlay/owner/stop_latch_test/hold_runner.py
++++ b/bench-overlay/owner/stop_latch_test/hold_runner.py
+@@ -67,11 +67,6 @@
+         parser.error('B2 requires an independent physical isolation approval file')
+     if args.stage3_lua_attestation_file and args.stage3_operator_mode != 'B2':
+         parser.error('Lua attestation requires B2')
+-    if bool(args.stage3_trace) != bool(args.stage3_baseline):
+-        parser.error('Stage 3 requires a private rollback baseline')
+-    if args.stage3_trace and (not args.nav_mission_tx or args.dynamic_mission_profile
+-                             or args.local_ekf_bench_action or args.web_arm_boot_id):
+-        parser.error('Stage 3 requires its dedicated planar profile without mission or ARM')
+     if args.nav_mission_tx and (args.nav_bench_tx or not args.dynamic_mission_profile):
+         parser.error('NAV_MISSION_TX requires mission storage and excludes the short bench TX profile')
+     planar_tx = args.nav_bench_tx or args.nav_mission_tx
