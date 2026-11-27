@@ -1,0 +1,989 @@
+--- /dev/null
++++ b/disarm_control/b3_lease.py
+@@ -0,0 +1,153 @@
++"""Single-Owner B3 test lease. No serial opener and no client-supplied frames."""
++import hashlib
++import re
++import threading
++import time
++
++from .stage3 import Refused, IDLE
++
++OPS = frozenset({'S3_B3_STATUS','S3_B3_OPEN','S3_B3_RENEW','S3_B3_REVOKE','S3_B3_ROW'})
++SCENARIOS = frozenset({'revoke','client_exit','expiry'})
++CAP = 64
++RATE = .1
++
++
++class BenchLease:
++    def __init__(self, clock, identity, alive, approved, guard, pose, encode, write,
++                 ns=time.monotonic_ns, qualified=lambda: True):
++        self.clock, self.identity, self.alive, self.approved = clock, identity, alive, approved
++        self.guard, self.pose, self.encode, self.write, self.ns = guard, pose, encode, write, ns
++        self.qualified = qualified
++        self.lock = threading.RLock()
++        self.lease = None
++        self.request = None
++        self.used = set()
++        self.rows = []
++        self.stop = None
++        self.fault = False
++        self.sent_total = 0
++        self.last_pose = None
++        self.last_write = float('-inf')
++
++    def close(self, reason, trigger=None):
++        if self.lease is not None:
++            instant = self.ns()
++            self.stop = dict(reason=reason, trigger_ns=instant if trigger is None else trigger,
++                             gate_ns=instant, barrier_ns=instant,
++                             lease_start_ns=self.lease['start_ns'],
++                             last_renew_ns=self.lease['renew_ns'], scenario=self.lease['scenario'])
++            self.lease = None
++        self.request = None
++
++    def _expire(self):
++        if not self.lease:
++            return
++        l = self.lease
++        now = self.clock()
++        if not self.alive(l['peer']):
++            self.close('client_exit')
++        elif now >= l['deadline']:
++            self.close('expiry', l['renew_ns'])
++        elif now >= l['hard']:
++            self.close('hard_limit')
++        elif self.identity() != l['identity'] or not self.approved(l) or not self.guard():
++            self.close('guard_lost')
++
++    def active(self):
++        with self.lock:
++            return self.lease is not None or self.request is not None
++
++    def dispatch(self, peer, op, body):
++        received = self.ns()
++        with self.lock:
++            if op == 'S3_B3_STATUS' and not body:
++                return dict(active=self.active(), fault=self.fault, stop=self.stop,
++                            count=len(self.rows), start_ns=self.lease and self.lease['start_ns'])
++            if op == 'S3_B3_ROW' and set(body)=={'index'}:
++                index=body['index']
++                if self.active() or type(index) is not int or not 0 <= index < len(self.rows):
++                    raise Refused('B3_TRACE_UNAVAILABLE')
++                return self.rows[index]
++            if op == 'S3_B3_OPEN':
++                if (set(body) != {'scenario','nonce'} or self.active() or self.fault
++                        or not isinstance(body['scenario'],str) or body['scenario'] not in SCENARIOS
++                        or not isinstance(body['nonce'],str) or not re.fullmatch('[0-9a-f]{32}',body['nonce'])
++                        or body['nonce'] in self.used or len(self.used)>=16 or not self.alive(peer)):
++                    raise Refused('B3_OPEN_REFUSED')
++                i=self.identity()
++                if not i:
++                    raise Refused('B3_IDENTITY_REQUIRED')
++                request=dict(peer=peer,identity=i,scenario=body['scenario'],nonce=body['nonce'])
++                if not self.approved(request) or not self.guard():
++                    raise Refused('B3_OPEN_REFUSED')
++                self.request=request
++                self.used.add(body['nonce'])
++                self.rows.clear()
++                self.stop=None
++                return {'queued':True}
++            if body:
++                raise Refused('B3_UNEXPECTED_PAYLOAD')
++            if op == 'S3_B3_REVOKE' and any(x and x['peer']==peer for x in (self.lease,self.request)):
++                self.close('revoke',received)
++                return {'closed':True}
++            if op == 'S3_B3_RENEW' and self.lease and self.lease['peer']==peer:
++                self._expire()
++                if self.lease:
++                    self.lease.update(deadline=self.clock()+IDLE,renew_ns=self.ns())
++                    return {'renewed':True}
++            raise Refused('B3_OPERATION_REFUSED')
++
++    def tick(self, fd):
++        # This lock spans final guard and the single nonblocking syscall:
++        # revocation linearizes after any syscall already holding this lock.
++        with self.lock:
++            if self.request:
++                now=self.clock()
++                ns=self.ns()
++                self.lease=dict(self.request,deadline=now+IDLE,hard=now+5,start_ns=ns,renew_ns=ns)
++                self.request=None
++            self._expire()
++            if not self.lease or self.clock()-self.last_write < RATE:
++                return
++            pose=self.pose()
++            if pose is None or not 0 <= self.clock()-pose['acquired_at'] <= .2:
++                self.close('pose_stale')
++                return
++            if pose['sequence']==self.last_pose:
++                return
++            if len(self.rows)>=CAP:
++                self.fault=True
++                self.close('trace_capacity')
++                return
++            try:
++                raw, meta=self.encode(pose)
++            except (ValueError, OSError, TypeError, KeyError, OverflowError):
++                self.fault=True
++                self.close('encode_fault')
++                return
++            if not self.qualified():
++                self.close('alignment_unverified')
++                return
++            self._expire()
++            if not self.lease:
++                return
++            if not 0 <= self.clock()-pose['acquired_at'] <= .2:
++                self.close('pose_stale')
++                return
++            l=self.lease
++            row=dict(meta,event='tx',sha256=hashlib.sha256(raw).hexdigest(),
++                     size=len(raw),lease=l['nonce'],session=l['identity']['owner_session'])
++            self.last_pose=pose['sequence']
++            row['enter_ns']=self.ns()
++            try:
++                row['written']=self.write(fd,raw)
++            except OSError as e:
++                row.update(written=-1,errno=e.errno)
++            row['exit_ns']=self.ns()
++            self.rows.append(row)
++            self.last_write=self.clock()
++            if row['written']==len(raw):
++                self.sent_total += 1
++            else:
++                self.fault=True
++                self.close('serial_write_fault')
+--- a/disarm_control/ipc.py
++++ b/disarm_control/ipc.py
+@@ -16,7 +16,11 @@
+ from .stage3 import Refused
+ from .stage3_operator import OPS
+ 
+-STAGE3_OPERATIONS = OPS
++from .log_queue import OPS as LOG_OPS
++
++from .b3_lease import OPS as B3_OPS
++
++STAGE3_OPERATIONS = OPS | LOG_OPS | B3_OPS
+ 
+ LIMIT = 4096
+ MISSION_STATUS_REPLY_LIMIT = 8192
+@@ -126,9 +130,10 @@
+ 
+ class OwnerServer:
+     """Explicit start only, one bounded request at a time, no unlink-on-start."""
+-    def __init__(self, engine, path, *, allowed_uid=None, policy=None, stop_operations=None, arm_operations=None, disarm_request=None, brake_operations=None, mission_operations=None, stage3_dispatch=None):
++    def __init__(self, engine, path, *, allowed_uid=None, policy=None, stop_operations=None, arm_operations=None, disarm_request=None, brake_operations=None, mission_operations=None, stage3_dispatch=None, log_enabled=False, b3_enabled=False):
+         self.engine, self.path = engine, Path(path)
+         self.stage3_dispatch = stage3_dispatch
++        self.stage3_operations = OPS | (LOG_OPS if log_enabled else frozenset()) | (B3_OPS if b3_enabled else frozenset())
+         self.stop_operations = stop_operations or {}
+         self.arm_operations = arm_operations or {}
+         if set(self.arm_operations) - {'ARM', 'ARM_READY', 'ARM_STATUS'}:
+@@ -166,7 +171,7 @@
+                     operation = body.get('op')
+                     mission = type(operation) is str and operation in owner.mission_operations
+                     stage3 = (owner.stage3_dispatch is not None and type(operation) is str
+-                              and operation in STAGE3_OPERATIONS)
++                              and operation in owner.stage3_operations)
+                     fields = {'op', 'actor_id', 'actor', 'request_id', 'nonce'}
+                     if mission or stage3:
+                         fields.add('payload')
+--- /dev/null
++++ b/disarm_control/log_disarmed.py
+@@ -0,0 +1,178 @@
++"""Owner-local transaction core. Transport and authorization are injected."""
++from contextlib import contextmanager
++import fcntl
++import hashlib
++import json
++import os
++from pathlib import Path
++import re
++import stat
++import tempfile
++import uuid
++
++PARAMETER = "LOG_DISARMED"
++GUARDS = ("fresh_heartbeat", "hold", "disarmed", "inhibit", "stop_latch",
++          "isolated", "tx_disabled", "tx_zero", "exclusive_owner")
++HEX = re.compile(r"[0-9a-f]{32,64}")
++PHASES = {"enable_intent", "enabled", "restore_intent", "restored"}
++
++
++class Refused(RuntimeError):
++    pass
++
++
++def identity(value):
++    if (type(value) is not dict or set(value) != {"hardware", "pi_boot", "fc_boot", "owner_session"}
++            or any(not isinstance(v, str) or not HEX.fullmatch(v) for v in value.values())):
++        raise Refused("verified hardware and session identity required")
++    return dict(value)
++
++
++class Journal:
++    """One record, atomically updated. Retain completed records until next intent."""
++
++    def __init__(self, directory):
++        self.directory = Path(directory)
++        self.record = self.directory / "log-disarmed.json"
++
++    @contextmanager
++    def lock(self):
++        info = self.directory.lstat()
++        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
++            raise Refused("private persistent journal directory required")
++        lock = self.directory / "log-disarmed.lock"
++        fd = os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
++        try:
++            s = os.fstat(fd)
++            if not stat.S_ISREG(s.st_mode) or s.st_uid != os.getuid() or s.st_nlink != 1 or s.st_mode & 0o077:
++                raise Refused("invalid lock")
++            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
++            yield
++        finally:
++            os.close(fd)
++
++    def load(self):
++        try:
++            fd = os.open(self.record, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
++        except FileNotFoundError:
++            return None
++        with os.fdopen(fd, "rb") as stream:
++            s = os.fstat(stream.fileno())
++            if not stat.S_ISREG(s.st_mode) or s.st_uid != os.getuid() or s.st_nlink != 1 or s.st_mode & 0o077:
++                raise Refused("invalid journal inode")
++            raw = stream.read(4097)
++        if len(raw) > 4096:
++            raise Refused("oversize journal")
++        envelope = json.loads(raw)
++        row = envelope["record"]
++        if (envelope["sha256"] != hashlib.sha256(self.encode(row)).hexdigest()
++                or set(row) != {"transaction", "identity", "baseline", "phase", "last_session"}
++                or row["phase"] not in PHASES or type(row["baseline"]) is not int
++                or row["baseline"] not in (0, 2, 3)
++                or not isinstance(row["transaction"], str) or not HEX.fullmatch(row["transaction"])):
++            raise Refused("invalid journal")
++        identity(row["identity"])
++        identity(row["last_session"])
++        if row["last_session"]["hardware"] != row["identity"]["hardware"]:
++            raise Refused("inconsistent journal hardware")
++        return row
++
++    @staticmethod
++    def encode(data):
++        return json.dumps(data, sort_keys=True, separators=(",", ":")).encode()
++
++    def save(self, row):
++        body = self.encode(dict(record=row, sha256=hashlib.sha256(self.encode(row)).hexdigest()))
++        fd, temporary = tempfile.mkstemp(prefix=".log-disarmed-", dir=self.directory)
++        try:
++            with os.fdopen(fd, "wb") as stream:
++                stream.write(body)
++                stream.flush()
++                os.fsync(stream.fileno())
++            os.replace(temporary, self.record)
++            directory = os.open(self.directory, os.O_DIRECTORY | os.O_RDONLY | os.O_NOFOLLOW)
++            try:
++                os.fsync(directory)
++            finally:
++                os.close(directory)
++        finally:
++            if os.path.lexists(temporary):
++                os.unlink(temporary)
++
++
++class Transaction:
++    """Run away from the Owner telemetry tick, with one checked port.
++
++    Port samples identity and guards from the same owner stream. read_log_disarmed
++    must initiate a new PARAM_REQUEST_READ and wait for its own receive window.
++    write_log_disarmed permits only the fixed PARAM_SET on the Owner link. The
++    injected port calls check on the Owner thread immediately before actual send.
++    Queued work must be cancelled at timeout, never dispatched after expiration.
++    """
++
++    def __init__(self, journal, port, *, gateway_uid, authorized, profile):
++        self.journal, self.port = journal, port
++        self.uid, self.authorized, self.profile = gateway_uid, authorized, profile
++
++    def execute(self, peer, action, request):
++        # peer is from SO_PEERCRED plus process generation, never client JSON.
++        expected = {"begin": set(), "restore": {"transaction"}, "recover": {"transaction"}}
++        if (type(peer) is not tuple or len(peer) != 3 or peer[0] != self.uid
++                or type(request) is not dict or action not in expected
++                or set(request) != expected[action] or self.profile != "B2-LOG"):
++            raise Refused("operation, profile or peer forbidden")
++        with self.journal.lock():
++            current = identity(self.port.identity())
++            row = self.journal.load()
++            transaction = uuid.uuid4().hex if action == "begin" else request["transaction"]
++
++            def guard():
++                state = self.port.safety()
++                if (identity(self.port.identity()) != current
++                        or not self.authorized(peer, action, transaction, current)
++                        or any(state.get(k) is not True for k in GUARDS)):
++                    raise Refused("authorization, session or safety lost")
++
++            def read():
++                guard()
++                value = self.port.read_log_disarmed(guard)
++                guard()
++                if type(value) is not int or value not in (0, 1, 2, 3):
++                    raise Refused("invalid independent readback")
++                return value
++
++            guard()
++            if action == "begin":
++                if row and row["phase"] != "restored":
++                    raise Refused("unfinished journal; explicit recovery required")
++                baseline = read()
++                if baseline == 1:
++                    raise Refused("already enabled; no transaction")
++                row = dict(transaction=transaction, identity=current, last_session=current,
++                           baseline=baseline, phase="enable_intent")
++                self.journal.save(row)
++                guard()
++                self.port.write_log_disarmed(1, guard)
++                if read() != 1:
++                    raise Refused("enable readback mismatch")
++                row["phase"] = "enabled"
++            else:
++                if (not row or row["transaction"] != transaction or row["phase"] == "restored"
++                        or row["identity"]["hardware"] != current["hardware"]):
++                    raise Refused("no matching transaction on this hardware")
++                if action == "restore" and (row["phase"] != "enabled" or current != row["identity"]):
++                    raise Refused("explicit recovery required")
++                baseline = row["baseline"]
++                value = read()
++                if value not in (baseline, 1):
++                    raise Refused("unexpected live value; manual reconciliation required")
++                row.update(phase="restore_intent", last_session=current)
++                self.journal.save(row)
++                if value != baseline:
++                    guard()
++                    self.port.write_log_disarmed(baseline, guard)
++                if read() != baseline:
++                    raise Refused("restore readback mismatch")
++                row["phase"] = "restored"
++            self.journal.save(row)
++            return dict(row)
+--- /dev/null
++++ b/disarm_control/log_discovery.py
+@@ -0,0 +1,54 @@
++"""Bounded metadata-only collector for the existing Owner's parameter stream."""
++import hashlib
++
++from pymavlink.dialects.v20 import ardupilotmega as mav
++
++from .log_disarmed import PARAMETER, Refused
++
++MAX_ENTRIES = 4096
++MAX_FRAMES = MAX_ENTRIES * 3
++SCAN_SECONDS = 480
++INDEX_INTERVAL = .1
++
++
++class Inventory:
++    def __init__(self):
++        self.entries = {}
++        self.names = {}
++        self.count = None
++        self.frames = 0
++        self.target = None
++
++    def add(self, message):
++        self.frames += 1
++        if self.frames > MAX_FRAMES:
++            raise Refused('LOG_DISCOVERY_FRAME_LIMIT')
++        index, count, name, kind = (message.param_index, message.param_count,
++                                   message.param_id, message.param_type)
++        if index == 65535:
++            return False  # Named reply or PARAM_SET echo cannot prove inventory.
++        if (not 0 < count <= MAX_ENTRIES or not 0 <= index < count
++                or not name or not name.isascii() or len(name) > 16
++                or any(ord(c) < 33 or ord(c) > 126 for c in name)
++                or not mav.MAV_PARAM_TYPE_UINT8 <= kind <= mav.MAV_PARAM_TYPE_REAL64
++                or (self.count is not None and self.count != count)):
++            raise Refused('LOG_DISCOVERY_INVALID_METADATA')
++        self.count = count
++        key = hashlib.blake2s(name.encode(), digest_size=16).digest()
++        row = (key, kind)
++        if self.entries.get(index, row) != row or self.names.get(key, index) != index:
++            raise Refused('LOG_DISCOVERY_AMBIGUOUS_INDEX')
++        self.entries[index] = row
++        self.names[key] = index
++        if name == PARAMETER:
++            if kind != mav.MAV_PARAM_TYPE_INT8 or message.param_value not in (0, 1, 2, 3):
++                raise Refused('LOG_DISCOVERY_INVALID_TARGET')
++            target = (index, kind, int(message.param_value))
++            if self.target is not None and self.target != target:
++                raise Refused('LOG_DISCOVERY_TARGET_CHANGED')
++            self.target = target
++        if len(self.entries) != count:
++            return False
++        if self.target is None:
++            raise Refused('LOG_DISCOVERY_TARGET_MISSING')
++        return True
+--- /dev/null
++++ b/disarm_control/log_queue.py
+@@ -0,0 +1,301 @@
++"""Single-slot handoff to the existing Owner tick. Disk work stays in worker."""
++from hashlib import sha256
++import os
++from pathlib import Path
++import stat
++import threading
++import uuid
++
++from .log_disarmed import GUARDS, Journal, Refused, Transaction, identity
++from .owner_port import LogDisarmedPort, TARGET, mav
++from .log_discovery import INDEX_INTERVAL, MAX_FRAMES, SCAN_SECONDS, Inventory
++
++OPS = frozenset({'S3_LOG_STATUS', 'S3_LOG_BEGIN', 'S3_LOG_RESTORE', 'S3_LOG_RECOVER', 'S3_LOG_RESULT', 'S3_LOG_DISCOVER'})
++QUIET = .30
++
++
++class LogQueue:
++    def __init__(self, clock, directory, marker, pi_boot, port_path, gateway_uid, root_attested,
++                 peer_alive, safety, telemetry=None):
++        self.clock, self.marker, self.port_path = clock, marker, port_path
++        self.pi_boot, self.root_attested, self.peer_alive = pi_boot.replace('-', ''), root_attested, peer_alive
++        self.safety = safety
++        self.telemetry = telemetry
++        self.failure = None
++        self.inventory = None
++        self.last_param_received = None
++        self.param_frames = 0
++        self.scan_frames = 0
++        self.next_index_send = float("-inf")
++        self.fault = False
++        self.lock = threading.Lock()
++        self.slot = None
++        self.last_param = float('-inf')
++        self.session = uuid.uuid4().hex
++        self.current = {}
++        self.link = None
++        self.fc_time = None
++        self.job = self.peer = self.result = None
++        self.journal = Journal(directory)
++        self.gateway_uid = gateway_uid
++        self.discovery = None
++
++    def identity(self):
++        return self.current.copy()
++
++    def authorized(self, peer, action, transaction, current):
++        if not self.peer_alive(peer):
++            return False
++        binding = ' '.join(current[key] for key in ('hardware', 'pi_boot', 'fc_boot', 'owner_session'))
++        return self.root_attested(self.marker, f'B2-LOG {binding} {action} '
++                                  f'{transaction if action not in ("begin", "discover") else "-"}')
++
++    def verified(self):
++        record = self.discovery
++        return record if record is not None and record['identity'] == self.current else None
++
++    def snapshot_failure(self, code, sample=None, state=None):
++        if self.failure is not None:
++            return
++        if sample is None:
++            sample = self.telemetry() if self.telemetry else {}
++        if state is None:
++            state = self.safety()
++        counters = self.inventory
++        self.failure = dict(reason=code, at=self.clock(),
++                            last_param_at=self.last_param_received,
++                            received=self.scan_frames if counters else 0,
++                            unique=len(counters.entries) if counters else 0,
++                            **{k: sample.get(k) for k in ('servo5', 'servo6', 'pwm_age', 'heartbeat_age', 'tx_sent')},
++                            **{k: state.get(k) for k in ('hold','disarmed','inhibit','stop_latch','tx_disabled','tx_zero')})
++
++    def discover(self, peer):
++        current = identity(self.identity())
++        inventory = Inventory()
++        self.inventory = inventory
++        deadline = self.clock() + SCAN_SECONDS
++
++        def guard():
++            state = self.safety()
++            sample = self.telemetry() if self.telemetry else {}
++            age = sample.get('pwm_age')
++
++            def fail(code):
++                self.snapshot_failure(code, sample, state)
++                raise Refused(code)
++
++            if self.identity() != current:
++                fail('LOG_DISCOVERY_SESSION_CHANGED')
++            if not self.authorized(peer, 'discover', '-', current):
++                fail('LOG_DISCOVERY_AUTHORIZATION_REVOKED')
++            for key in GUARDS:
++                if state.get(key) is not True:
++                    fail('LOG_DISCOVERY_' + key.upper())
++            if (not sample.get('pwm_current') or age is None or not 0 <= age < 3):
++                fail('LOG_DISCOVERY_PWM_NOT_FRESH')
++            if sample.get('servo5') != 999 or sample.get('servo6') != 999:
++                fail('LOG_DISCOVERY_PWM_NOT_HOLD')
++            if self.scan_frames > MAX_FRAMES:
++                fail('LOG_DISCOVERY_FRAME_LIMIT')
++            if self.clock() >= deadline:
++                fail('LOG_DISCOVERY_DEADLINE')
++
++        frame_start = self.param_frames
++        guard()
++        offset = 0
++        while inventory.count is None or offset < inventory.count:
++            def accept(message):
++                if message.param_index != offset:
++                    return False
++                inventory.add(message)
++                return True
++
++            self.exchange(mav.MAVLink_param_request_read_message(*TARGET, b'', offset),
++                          guard, min(2.0, deadline-self.clock()), accept,
++                          quiet=QUIET if offset == 0 else 0, paced=True)
++            offset += 1
++        index, kind, value = inventory.target
++        port = LogDisarmedPort(self.exchange, self.identity, self.safety, index)
++        readback = port.read_log_disarmed(guard, expected_count=inventory.count)
++        guard()
++        if readback != value:
++            raise Refused('LOG_DISCOVERY_READBACK_MISMATCH')
++        return dict(identity=current, param_id='LOG_DISARMED', index=index,
++                    param_type=kind, value=readback, count=inventory.count,
++                    unique=len(inventory.entries), received=self.param_frames-frame_start)
++
++    def observe(self, message):
++        if (message.get_srcSystem(), message.get_srcComponent()) != (1, 1):
++            return
++        kind = message.get_type()
++        if kind in ('SYSTEM_TIME', 'ATTITUDE'):
++            value = int(message.time_boot_ms)
++            if self.fc_time is not None and value + 1000 < self.fc_time:
++                self.link = None
++                self.current = {}
++                self.fc_time = None
++            self.fc_time = max(self.fc_time or 0, value)
++        if kind != 'PARAM_VALUE':
++            return
++        with self.lock:
++            self.last_param_received = self.last_param = self.clock()
++            self.param_frames += 1
++            slot = self.slot
++            if self.job == 'discover':
++                self.scan_frames += 1
++                if self.scan_frames > MAX_FRAMES and slot and not slot['done'].is_set():
++                    slot['error'] = Refused('LOG_DISCOVERY_FRAME_LIMIT')
++                    slot['done'].set()
++                    return
++            if not (slot and not slot['done'].is_set() and slot.get('sent')
++                    and self.clock() < slot['expires'] and slot['accept'] is not None):
++                return
++            try:
++                if slot['accept'](message):
++                    slot['reply'] = message
++                    slot['done'].set()
++            except Refused as error:
++                slot['error'] = error
++                slot['done'].set()
++
++    def exchange(self, message, check, timeout, accept, *, quiet=QUIET, paced=False):
++        done = threading.Event()
++        with self.lock:
++            if self.slot is not None:
++                raise Refused('LOG_QUEUE_BUSY')
++            slot = dict(message=message, check=check, expires=self.clock()+timeout,
++                        accept=accept, done=done, quiet=quiet, paced=paced)
++            self.slot = slot
++        try:
++            if not done.wait(timeout):
++                with self.lock:
++                    self.fault = True
++                raise TimeoutError('LOG_REQUEST_TIMEOUT')
++            if 'error' in slot:
++                raise slot['error']
++            return slot.get('reply')
++        finally:
++            with self.lock:
++                if self.slot is slot:
++                    self.slot = None
++
++    def tick(self, fd, send, *, connected, epoch, priority_clear):
++        # Serial identity is tied to this Owner descriptor, not to a caller.
++        if not connected:
++            self.current = {}
++            self.link = None
++            self.fc_time = None
++        elif self.link != (fd, epoch) and self.fc_time is not None:
++            try:
++                device = Path(self.port_path)
++                live = device.stat()
++                opened = os.fstat(fd)
++                if not (device.is_symlink() and stat.S_ISCHR(opened.st_mode)
++                        and (live.st_dev, live.st_ino, live.st_rdev) ==
++                            (opened.st_dev, opened.st_ino, opened.st_rdev)):
++                    raise ValueError('link mismatch')
++                hardware = sha256(device.name.encode()).hexdigest()
++                self.current = dict(hardware=hardware, pi_boot=self.pi_boot,
++                                    fc_boot=uuid.uuid4().hex, owner_session=self.session)
++                self.link = (fd, epoch)
++            except (OSError, ValueError):
++                self.current = {}
++        with self.lock:
++            slot = self.slot
++            if not slot or slot['done'].is_set():
++                return
++            now = self.clock()
++            try:
++                if now >= slot['expires'] or not connected:
++                    if slot.get('sent'):
++                        self.fault = True
++                    raise Refused('LOG_REQUEST_EXPIRED_OR_LINK_LOST')
++                slot['check']()
++                if slot.get('sent') or not priority_clear:
++                    return
++                if slot['paced'] and now < self.next_index_send:
++                    return
++                if slot['accept'] is not None and now-self.last_param < slot['quiet']:
++                    return
++                slot['check']()
++                if self.clock() >= slot['expires']:
++                    raise Refused('LOG_REQUEST_EXPIRED')
++                send(slot['message'])
++                if slot['paced']:
++                    self.next_index_send = self.clock() + INDEX_INTERVAL
++                slot['sent'] = True
++                self.last_param = self.clock()
++                if slot['accept'] is None:
++                    slot['done'].set()
++            except Exception as error:
++                if slot.get('sent'):
++                    self.fault = True
++                if self.job == 'discover':
++                    self.snapshot_failure(str(error) if isinstance(error, Refused) else 'LOG_DISCOVERY_IO')
++                slot['error'] = error
++                slot['done'].set()
++
++    def status(self, other_job, logs_busy):
++        with self.lock:
++            active, queued = self.job, int(self.slot is not None and not self.slot.get('sent'))
++        try:
++            record = self.journal.load()
++            pending = record if record and record['phase'] != 'restored' else None
++        except (OSError, ValueError, KeyError, TypeError, Refused):
++            pending = {'phase': 'invalid'}
++        return dict(profile='B2-LOG', identity=self.identity(), active=active or other_job,
++                    queued=queued + int(other_job is not None and not logs_busy), transport_fault=self.fault, unfinished=pending and {k: pending.get(k) for k in ('transaction','phase')},
++                    recovery_required=bool(pending) and active is None,
++                    discovery=self.verified(), failure_capture=self.failure,
++                    dataflash='ACTIVE_OR_END_OWED' if logs_busy else 'IDLE')
++
++    def dispatch(self, peer, op, payload, *, other_job, logs_busy):
++        if op == 'S3_LOG_STATUS' and not payload:
++            return self.status(other_job, logs_busy)
++        with self.lock:
++            if op == 'S3_LOG_RESULT' and not payload and peer == self.peer:
++                return dict(active=self.job, result=self.result)
++            action = {'S3_LOG_BEGIN':'begin','S3_LOG_RESTORE':'restore','S3_LOG_RECOVER':'recover', 'S3_LOG_DISCOVER':'discover'}.get(op)
++            fields = set() if action in ('begin', 'discover') else {'transaction'}
++            if (action is None or set(payload) != fields or self.job or other_job or logs_busy
++                    or self.fault or not self.peer_alive(peer)):
++                raise Refused('LOG_OPERATION_REFUSED')
++            proof = self.verified()
++            if action == 'discover':
++                self.discovery = None
++                self.failure = None
++                self.inventory = None
++                self.scan_frames = 0
++            elif proof is None:
++                raise Refused('LOG_DISCOVERY_REQUIRED')
++            self.job, self.peer, self.result = action, peer, None
++        def run():
++            try:
++                if action == 'discover':
++                    result = self.discover(peer)
++                    self.discovery = result
++                else:
++                    def authorized(p, act, transaction, current):
++                        return (self.verified() == proof
++                                and self.authorized(p, act, transaction, current))
++
++                    port = LogDisarmedPort(self.exchange, self.identity, self.safety,
++                                           proof['index'], proof['count'])
++                    transaction = Transaction(self.journal, port, gateway_uid=self.gateway_uid,
++                                              authorized=authorized, profile='B2-LOG')
++                    row = transaction.execute(peer, action, payload)
++                    result = {k: row[k] for k in ('transaction', 'phase', 'baseline')}
++            except (Refused, TimeoutError, OSError, ValueError, KeyError, TypeError) as error:
++                if action == 'discover':
++                    self.snapshot_failure(str(error) if isinstance(error, Refused) else
++                                          'LOG_DISCOVERY_TIMEOUT' if isinstance(error, TimeoutError) else 'LOG_DISCOVERY_IO')
++                    result = {'error':self.failure['reason'], 'failure_capture':self.failure}
++                else:
++                    result = {'error':'LOG_FAILED_CHECK_STATUS_AND_JOURNAL'}
++            finally:
++                with self.lock:
++                    self.result = locals().get('result', {'error':'LOG_WORKER_INTERRUPTED'})
++                    self.inventory = None
++                    self.job = None
++        threading.Thread(target=run, daemon=True, name='log-disarmed').start()
++        return {'queued':True}
+--- /dev/null
++++ b/disarm_control/owner_port.py
+@@ -0,0 +1,50 @@
++"""Fixed MAVLink packet builders for a future Owner-local queue adapter."""
++from pymavlink.dialects.v20 import ardupilotmega as mav
++
++from .log_disarmed import PARAMETER, Refused
++
++TARGET = (1, 1)
++WIRE_NAME = PARAMETER.encode("ascii")
++
++
++class LogDisarmedPort:
++    """No connection opener. The existing Owner must implement exchange.
++
++    exchange(message, check, timeout, accept) must run check on the sole
++    Owner thread immediately before sending. With no accept callback it
++    returns after confirmed local write, without treating PARAM_VALUE as ACK.
++    With a callback it returns the first matching message in a fresh receive
++    epoch after dispatch. The Owner must drain or quarantine earlier replies
++    and serialize parameter traffic. Expired work may never be sent.
++    """
++
++    def __init__(self, exchange, identity, safety, param_index, param_count=None):
++        if type(param_index) is not int or not 0 <= param_index <= 32767:
++            raise Refused("verified LOG_DISARMED index required")
++        self.param_index = param_index
++        self.param_count = param_count
++        self.exchange, self.identity, self.safety = exchange, identity, safety
++
++    def read_log_disarmed(self, check, *, expected_count=None):
++        expected_count = self.param_count if expected_count is None else expected_count
++        def accept(msg):
++            return (msg.get_type() == "PARAM_VALUE"
++                    and (msg.get_srcSystem(), msg.get_srcComponent()) == TARGET
++                    and msg.param_id == PARAMETER
++                    and msg.param_index == self.param_index
++                    and 0 <= msg.param_index < msg.param_count
++                    and (expected_count is None or msg.param_count == expected_count)
++                    and msg.param_type == mav.MAV_PARAM_TYPE_INT8
++                    and msg.param_value in (0, 1, 2, 3))
++
++        msg = self.exchange(mav.MAVLink_param_request_read_message(*TARGET, WIRE_NAME, self.param_index),
++                            check, 2.0, accept)
++        if msg is None or not accept(msg):
++            raise Refused("fresh LOG_DISARMED readback missing")
++        return int(msg.param_value)
++
++    def write_log_disarmed(self, value, check):
++        if type(value) is not int or value not in (0, 1, 2, 3):
++            raise Refused("invalid LOG_DISARMED value")
++        self.exchange(mav.MAVLink_param_set_message(*TARGET, WIRE_NAME, value, mav.MAV_PARAM_TYPE_INT8),
++                      check, 2.0, None)
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -57,7 +57,17 @@
+     parser.add_argument('--stage3-operator-mode', choices=('B1', 'B2'))
+     parser.add_argument('--stage3-bench-approval-file')
+     parser.add_argument('--stage3-lua-attestation-file')
++    parser.add_argument('--stage3-log-approval-file')
++    parser.add_argument('--stage3-log-journal-directory')
++    parser.add_argument('--stage3-b3-approval-file')
+     args = parser.parse_args(argv)
++    if args.stage3_b3_approval_file and not args.stage3_log_approval_file:
++        parser.error('B3 requires B2-LOG')
++    if (bool(args.stage3_log_approval_file) != bool(args.stage3_log_journal_directory)
++            or (args.stage3_log_approval_file and (args.stage3_operator_mode != 'B2'
++                or args.diagnostic_params or args.diagnostic_brake_params
++                or args.export_pixhawk_params or args.navigation_hold_watchdog))):
++        parser.error('B2-LOG requires B2 and dedicated journal/authorization')
+     if args.stage3_operator_mode and (not args.brake_hold_only or not args.navigation_readback
+             or args.nav_bench_tx or args.nav_mission_tx or args.externalnav_tx
+             or args.web_arm_boot_id or args.local_ekf_bench_action or args.ch6_mode_change
+@@ -173,6 +183,8 @@
+     mission = None
+     arm = None
+     operator = None
++    log_queue = None
++    b3 = None
+     if args.web_disarm_socket:
+         from disarm_control.engine import DisarmEngine, disarm_sender
+         from disarm_control.ipc import BRAKE_OPERATIONS, MISSION_OPERATIONS, OwnerServer, SocketPolicy
+@@ -186,6 +198,8 @@
+             diagnostics.observe(message)
+             if operator is not None:
+                 operator.observe(message)
++            if log_queue is not None:
++                log_queue.observe(message)
+             if mission is not None:
+                 mission.observe(message)
+         reader.command_observer = observe
+@@ -395,6 +409,121 @@
+             operator = BenchOperator(args.stage3_operator_mode, reader.clock, operator_guard,
+                                      operator_status, pi_boot=pi_boot, provenance=approved_lua)
+ 
++        if args.stage3_log_approval_file:
++            from disarm_control.log_queue import OPS as LOG_OPS, LogQueue
++            from disarm_control.ipc import peer_generation
++            from disarm_control.stage3 import Refused
++            from web_hmi.pixhawk_telemetry import PORT
++
++            def log_peer(peer):
++                uid, pid, generation = peer
++                try:
++                    return uid == args.web_disarm_client_uid and peer_generation(pid) == generation
++                except (OSError, ValueError, IndexError):
++                    return False
++
++            def log_safety():
++                s = operator_status()
++                return dict(fresh_heartbeat=s['heartbeat_age'] is not None and 0 <= s['heartbeat_age'] < 1.5,
++                            hold=s['hold'], disarmed=s['disarmed'], inhibit=s['inhibit'],
++                            stop_latch=s['stop_latch'], isolated=approved_isolation(),
++                            tx_disabled=s['tx_enabled'] is False,
++                            tx_zero=nav.snapshot()['sent'] == 0,
++                            exclusive_owner=s['hold_only'] and reader.state == 'READING')
++
++            def log_telemetry():
++                sample = diagnostics.servo_pwm
++                nav_state = nav.snapshot()
++                status = operator_status()
++                return dict(servo5=sample['servo5_raw_us'] if sample else None,
++                            servo6=sample['servo6_raw_us'] if sample else None,
++                            pwm_age=reader.clock()-sample['at'] if sample else None,
++                            pwm_current=bool(sample and sample['owner_epoch'] == reader.heartbeat_safety_serial
++                                             and reader.state == 'READING' and reader.source == (1, 1)),
++                            heartbeat_age=status['heartbeat_age'], tx_sent=nav_state['sent'])
++
++            log_queue = LogQueue(reader.clock, args.stage3_log_journal_directory,
++                                 args.stage3_log_approval_file, pi_boot, PORT,
++                                 args.web_disarm_client_uid, root_attested, log_peer, log_safety, log_telemetry)
++
++            def log_send(fd, message):
++                if os.get_blocking(fd):
++                    raise OSError('blocking owner descriptor')
++                packet = message.pack(encoder)
++                if os.write(fd, packet) != len(packet):
++                    raise OSError('partial LOG_DISARMED request')
++                encoder.seq = (encoder.seq + 1) % 256
++
++            if args.stage3_b3_approval_file:
++                from disarm_control.b3_lease import OPS as B3_OPS, BenchLease
++                from disarm_control.log_disarmed import GUARDS
++
++                def b3_allowed(lease):
++                    binding = ' '.join(lease['identity'][k] for k in
++                                       ('hardware','pi_boot','fc_boot','owner_session'))
++                    return root_attested(args.stage3_b3_approval_file,
++                                         f"B3 {binding} {lease['scenario']} {lease['nonce']}")
++
++                def b3_guard():
++                    state = log_safety()
++                    pwm = diagnostics.servo_outputs(reader.state == 'READING')
++                    return (all(state.get(k) is True for k in GUARDS)
++                            and reader.clock()-reader.messages["HEARTBEAT"][0] <= 1
++                            and all(pwm[str(i)]['state']=='FRESH' and pwm[str(i)]['pwm_us']==999
++                                    for i in (5,6))
++                            and not log_queue.fault and not log_queue.job
++                            and not operator.job and not operator.logs.busy
++                            and not bench.disarm_pending() and nav.static_writer is None
++                            and nav.bench_profile is None)
++
++                def b3_packet(p):
++                    cov = [float('nan')] + [0.0]*20
++                    usec = int(p['acquired_at']*1e6)
++                    seq = nav.encoder.seq
++                    msg = mav.MAVLink_odometry_message(
++                        usec, mav.MAV_FRAME_LOCAL_FRD, mav.MAV_FRAME_BODY_FRD,
++                        p['x'], p['y'], p['z'], p['q'], 0.,0.,0.,0.,0.,0.,
++                        cov,cov,0,mav.MAV_ESTIMATOR_TYPE_VISION,100)
++                    raw = msg.pack(nav.encoder)
++                    nav.encoder.seq = (seq+1)%256
++                    return raw, dict(id=331,seq=seq,sys=nav.encoder.srcSystem,
++                                     comp=nav.encoder.srcComponent,usec=usec)
++
++                def b3_write(fd, raw):
++                    if os.get_blocking(fd):
++                        raise OSError('blocking Owner descriptor')
++                    return os.write(fd, raw)
++
++                b3 = BenchLease(reader.clock, log_queue.identity, log_peer, b3_allowed,
++                                b3_guard, nav.route_pose, b3_packet, b3_write,
++                                qualified=nav.alignment_check)
++
++            def dispatch(peer, op, payload):
++                with operator.lock:
++                    if b3 is not None:
++                        if op in B3_OPS:
++                            if op == 'S3_B3_OPEN':
++                                log_state = log_queue.status(operator.job, operator.logs.busy)
++                                if (log_state['unfinished'] is not None
++                                        or os.path.lexists(args.stage3_log_approval_file)):
++                                    raise Refused('B3_LOG_AUTH_OR_JOURNAL_ACTIVE')
++                            return b3.dispatch(peer, op, payload)
++                        if b3.active() and (op == 'S3_BENCH_REQUEST' or
++                                            (op in LOG_OPS and op not in ('S3_LOG_STATUS','S3_LOG_RESULT'))):
++                            raise Refused('B3_BUSY')
++                    if op in LOG_OPS:
++                        result = log_queue.dispatch(peer, op, payload,
++                                                    other_job=operator.job and operator.job['kind'],
++                                                    logs_busy=operator.logs.busy)
++                        if b3 is not None and op == 'S3_LOG_STATUS':
++                            result['b3_active'] = b3.active()
++                        return result
++                    if op == 'S3_BENCH_REQUEST' and log_queue.job:
++                        raise Refused('LOG_TRANSACTION_BUSY')
++                    return operator.dispatch(peer, op, payload)
++        else:
++            dispatch = operator.dispatch if operator is not None else None
++
+         def owner_tick(fd):
+             guarded.tick(fd)
+             if brake is not None:
+@@ -414,6 +543,14 @@
+                 operator.tick(lambda op, *fields: operator_send(fd, op, *fields),
+                               connected=reader.state == 'READING' and reader.source == (1, 1),
+                               priority_clear=not bench.disarm_pending())
++            if log_queue is not None:
++                log_queue.tick(fd, lambda m: log_send(fd, m),
++                               connected=reader.state == 'READING' and reader.source == (1, 1),
++                               epoch=reader.heartbeat_safety_serial,
++                               priority_clear=not bench.disarm_pending())
++            if b3 is not None:
++                with operator.lock:
++                    b3.tick(fd)
+             if nav is not None:
+                 nav.tick(fd,command_pending=bench.disarm_pending())
+             if mission is not None:
+@@ -430,7 +567,7 @@
+             mission_operations={op: partial(mission.command, op) for op in MISSION_OPERATIONS}
+             if mission is not None else None,
+             arm_operations={'ARM': arm.request, 'ARM_READY': arm.ready, 'ARM_STATUS': arm.status} if arm else None,
+-            stage3_dispatch=operator.dispatch if operator is not None else None,
++            stage3_dispatch=dispatch, log_enabled=log_queue is not None, b3_enabled=b3 is not None,
+             disarm_request=priority_disarm,
+             allowed_uid=args.web_disarm_client_uid,
+             policy=SocketPolicy(os.getuid(), args.web_disarm_client_gid, 0o710, 0o660))
+@@ -451,7 +588,16 @@
+         page_app.add_url_rule('/api/production-stop', 'production_stop',
+             lambda: jsonify(production.status(0, 'diagnostic', '')), methods=['GET'])
+     if nav is not None:
+-        page_app.add_url_rule('/api/externalnav','externalnav',lambda:jsonify(nav.snapshot()),methods=['GET'])
++        def externalnav_status():
++            state = nav.snapshot()
++            if b3 is not None:
++                with b3.lock:
++                    state['b3_active'] = b3.active()
++                    state['tx_enabled'] = state['tx_enabled'] or b3.active()
++                    state['sent'] += b3.sent_total
++                    state['b3_fault'] = b3.fault
++            return jsonify(state)
++        page_app.add_url_rule('/api/externalnav','externalnav',externalnav_status,methods=['GET'])
+         nav.start()
+     if mode_change is not None:
+         page_app.add_url_rule('/api/ch6-mode-change', 'ch6_mode_change',
