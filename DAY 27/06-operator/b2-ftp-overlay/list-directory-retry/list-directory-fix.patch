@@ -1,0 +1,206 @@
+--- a/backup_client.py
++++ b/backup_client.py
+@@ -24,7 +24,8 @@
+ 
+ 
+ def write_private(path, contents):
+-    with path.open('xb') as output:
++    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
++    with os.fdopen(fd, 'wb') as output:
+         output.write(contents)
+         output.flush()
+         os.fsync(output.fileno())
+@@ -56,7 +57,14 @@
+         else:
+             raise TimeoutError('Owner FTP operation timed out')
+         if result['status'] != 'COMPLETE' or result['unresolved'] or not 0 <= result['count'] <= MAX_FILES:
+-            raise RuntimeError(f'Backup incomplete: {result}')
++            capture = result.get('failure_capture')
++            if capture is not None:
++                evidence = (json.dumps(capture, indent=2) + '\n').encode()
++                if len(evidence) > 1024:
++                    raise ValueError('Directory diagnostic exceeded limit')
++                write_private(output / 'list-directory-failure.json', evidence)
++                sync_dir(output)
++            raise RuntimeError(f"Backup incomplete: {result.get('reason') or result['status']}")
+         manifest = []
+         total = 0
+         for index in range(result['count']):
+--- a/overlay/disarm_control/ftp_backup.py
++++ b/overlay/disarm_control/ftp_backup.py
+@@ -4,7 +4,7 @@
+ from threading import RLock
+ from types import coroutine
+ 
+-from .scripts_ftp import FTPError, HEADER, MAX_FILE, ScriptsFTP
++from .scripts_ftp import DirectoryError, FTPError, HEADER, MAX_FILE, ScriptsFTP
+ from .stage3 import Refused
+ 
+ OPS = frozenset({'S3_FTP_START', 'S3_FTP_RESULT', 'S3_FTP_FILE', 'S3_FTP_CHUNK', 'S3_FTP_RELEASE'})
+@@ -52,7 +52,7 @@
+         self.sent = False
+         self.deadline = self.reply_deadline = self.next_send = self.retention = 0
+         self.result = 'IDLE'
+-        self.reason = None
++        self.reason = self.failure_capture = None
+         self.files = []
+         self.unresolved = False
+         self.ftp = None
+@@ -101,6 +101,8 @@
+         except StopIteration:
+             self._finish('COMPLETE')
+         except (FTPError, OSError) as error:
++            if isinstance(error, DirectoryError):
++                self.failure_capture = error.capture
+             self.reason = str(error) if isinstance(error, FTPError) else 'FTP_IO_ERROR'
+             self._finish('INCOMPLETE')
+         self.sent = False
+@@ -119,7 +121,7 @@
+                 self.peer, self.deadline = peer, self.clock() + MAX_TIME
+                 self.files.clear()
+                 self.result = 'BUSY'
+-                self.reason = None
++                self.reason = self.failure_capture = None
+                 self.ftp = ScriptsFTP(exchange, self.operate_guard, self.sequence)
+                 self.task = self.run(budget)
+                 self._advance()
+@@ -129,9 +131,11 @@
+                 raise Refused('FTP_PEER_OR_GUARD')
+             if op == 'S3_FTP_RESULT' and not payload:
+                 return dict(status=self.result, count=len(self.files) if self.result == 'COMPLETE' else 0,
+-                            unresolved=self.unresolved, reason=self.reason)
++                            unresolved=self.unresolved, reason=self.reason,
++                            failure_capture=self.failure_capture)
+             if op == 'S3_FTP_RELEASE' and not payload and self.task is None:
+                 self.files.clear()
++                self.failure_capture = None
+                 self.peer = None
+                 return {'released': True}
+             index = payload.get('index')
+@@ -151,6 +155,7 @@
+             if self.task is None:
+                 if self.peer is not None and (self.clock() >= self.retention or not self.peer_alive(self.peer)):
+                     self.files.clear()
++                    self.failure_capture = None
+                     self.peer = None
+                 return
+             now = self.clock()
+--- a/overlay/disarm_control/scripts_ftp.py
++++ b/overlay/disarm_control/scripts_ftp.py
+@@ -17,6 +17,28 @@
+ 
+ class FTPError(RuntimeError):
+     pass
++
++
++class DirectoryError(FTPError):
++    def __init__(self, reason, reply):
++        super().__init__(reason)
++        seq, session, opcode, size, request, _, _, offset = HEADER.unpack_from(reply)
++        self.capture = dict(payload_hex=reply.hex(), declared_size=size, offset=offset,
++                            sequence=seq, opcode=opcode, request_opcode=request,
++                            session_id=session, reason=reason)
++
++
++def directory_records(data):
++    cursor = 0
++    while cursor < len(data):
++        end = data.find(b"\0", cursor)
++        if end == -1 or end == cursor:
++            raise FTPError("invalid directory record delimiter")
++        yield data[cursor:end]
++        cursor = end + 1
++        # Rover 4.7.2 counts the explicit NUL and the snprintf terminator.
++        if data[cursor:cursor+1] == b"\0":
++            cursor += 1
+ 
+ 
+ def confined_path(parts):
+@@ -50,6 +72,7 @@
+         self._guard = guard
+         self._sequence = sequence & 0xffff
+         self.session_uncertain = False
++        self._list_reply = None
+ 
+     async def _request(self, operation, *, parts=(), offset=0, count=0):
+         if operation not in (TERMINATE, LIST, OPEN_RO, READ, CRC):
+@@ -63,11 +86,13 @@
+         if operation == OPEN_RO:
+             self.session_uncertain = True
+         reply = await self._exchange((packet + path).ljust(251, b"\0"))
++        if operation == LIST and HEADER.size <= len(reply) <= 251:
++            self._list_reply = reply
+         if len(reply) != 251:
+             raise FTPError("invalid MAVFTP payload length")
+         number, session, opcode, size, request, burst, _, reply_offset = HEADER.unpack_from(reply)
+         if (number != (seq + 1) & 0xffff or session != 0 or request != operation
+-                or burst or size > MAX_DATA):
++                or burst or size > MAX_DATA or (operation == LIST and reply_offset != offset)):
+             raise FTPError("uncorrelated MAVFTP reply")
+         data = reply[HEADER.size:HEADER.size + size]
+         if opcode == NAK and size in (1, 2):
+@@ -86,26 +111,35 @@
+         entries = {}
+         seen = set()
+         while True:
+-            opcode, data = await self._request(LIST, parts=parts, offset=offset)
+-            if opcode == NAK:
+-                if data == bytes([EOF]):
+-                    self._guard()
+-                    return entries
+-                raise FTPError("directory listing rejected")
+-            if not data.endswith(b"\0"):
+-                raise FTPError("incomplete directory page")
+-            for entry in data[:-1].split(b"\0"):
+-                offset += 1
+-                if offset > MAX_ENTRIES:
+-                    raise FTPError("directory entry limit")
+-                if entry in (b"D.", b"D.."):
+-                    continue
+-                kind, name, raw_size = self._entry(entry)
+-                confined_path((*parts, name))
+-                if name.casefold() in seen:
+-                    raise FTPError("duplicate or case-aliased entry")
+-                seen.add(name.casefold())
+-                entries[name] = int(raw_size) if kind == "F" else None
++            self._list_reply = None
++            try:
++                opcode, data = await self._request(LIST, parts=parts, offset=offset)
++                if opcode == NAK:
++                    if data == bytes([EOF]):
++                        break
++                    raise FTPError("directory listing rejected")
++                if not data:
++                    raise FTPError("empty directory ACK")
++                for entry in directory_records(data):
++                    offset += 1
++                    if offset > MAX_ENTRIES:
++                        raise FTPError("directory entry limit")
++                    if entry in (b"S", b"D.", b"D.."):
++                        continue
++                    kind, name, raw_size = self._entry(entry)
++                    confined_path((*parts, name))
++                    if name.casefold() in seen:
++                        raise FTPError("duplicate or case-aliased entry")
++                    seen.add(name.casefold())
++                    entries[name] = int(raw_size) if kind == "F" else None
++            except FTPError as error:
++                if self._list_reply is not None:
++                    raise DirectoryError(str(error), self._list_reply) from error
++                raise
++            finally:
++                self._list_reply = None
++        self._guard()
++        return entries
+ 
+     @staticmethod
+     def _entry(entry):
+@@ -116,7 +150,7 @@
+         name, sep, size = text[1:].partition("\t")
+         if text.startswith("D") and not sep:
+             return "D", name, ""
+-        if text.startswith("F") and sep and size.isdecimal() and len(size) <= 10:
++        if text.startswith("F") and sep and size.isdecimal() and len(size) <= 10 and int(size) <= 0xffffffff:
+             return "F", name, size
+         raise FTPError("unsupported directory entry")
+ 

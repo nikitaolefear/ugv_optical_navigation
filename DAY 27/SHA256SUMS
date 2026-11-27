@@ -57,6 +57,9 @@ f41b7e3a616ca3952c2f55ff38420f0d990bd39a0726df207d9a48010fc03fce  ./06-operator/
 908d061943298fa673c9d343a9f9b36ee6cfaf9b564517f8d003bd12cc424219  ./06-operator/b2-ftp-overlay/backup_client.py
 5b0f07e8724a2d459efc2244511e77a6e68a06c6cf9460d2b64b3d3a0744bc74  ./06-operator/b2-ftp-overlay/deploy.sh
 572f37e326cfbf572f28f2ec04a3fac81cdb99ac6b163f4db8d7ef4d730ed0ff  ./06-operator/b2-ftp-overlay/integration.patch
+357ce1a41d7ea751ea35d4c4a1bd0595def7f276a06f4856a6152322d04d3614  ./06-operator/b2-ftp-overlay/list-directory-retry/TEST-REPORT.md
+d463aa1c6bbcf95721fa3faad14d85c1c0cf5d137e6b8c649025defe731fc84b  ./06-operator/b2-ftp-overlay/list-directory-retry/list-directory-fix.patch
+bfc81b5b32d99f2b4b66fb3f1d4dc919a7db583e131bb98d6d9b53e6c6d8b209  ./06-operator/b2-ftp-overlay/list-directory-retry/test_directory_retry.py
 80675f46107deb4484b60f17075277d80a760b66dfb65788afad80c334db7cc1  ./06-operator/b2-ftp-overlay/offline_tests.py
 c5571bc6d4cd1e20582b2257225f00ed6b25ac5efacfd5fdaed154a73b190ac5  ./06-operator/b2-ftp-overlay/profile.py
 287ac73e1ba7318e024a26499e69fc67f4ba40d7da43b2b77b3e9984eeb9ed06  ./06-operator/b2-ftp-overlay/test_scripts_ftp.py
