@@ -50,6 +50,7 @@ c511c8d309fed418a1a4dc2a98a9b8a82306dd7054bb506721ef05756004edaf  ./06-operator/
 f3554641400508009ae34ccb5d68807321fdac0658c065ce687aef86a022aa63  ./06-operator/OPERATOR_CANDIDATE.patch
 5410203482314fe7013872c36c7a3943ddd76c7bc747cd4754efc6c11062b9ae  ./06-operator/TEST_REPORT.md
 16f925e0695b06b72521fa248937d335395b0b4da4d9df6bd62f5af960f655cc  ./06-operator/b2-ftp-overlay/B2-FTP-LIVE-PRECHECK.md
+9e78ab1dec0cb1415ab1c54c7c44aa7bdd59a5df39fe7585566c53c48b51edf3  ./06-operator/b2-ftp-overlay/B2-FTP-LIVE-RESULT.md
 dca889a265a09cbadf65977bacaf456681a5e09fd4d92c4bd252dda3a381b961  ./06-operator/b2-ftp-overlay/BASE_SHA256
 f41b7e3a616ca3952c2f55ff38420f0d990bd39a0726df207d9a48010fc03fce  ./06-operator/b2-ftp-overlay/OPERATOR.md
 2f5a6572e6b6bdeff6fc80cee807ed1b82e156b8a37a1207b0e3f9235ceee002  ./06-operator/b2-ftp-overlay/TEST-REPORT.md
