@@ -1,0 +1,498 @@
+--- /dev/null
++++ b/disarm_control/ftp_backup.py
+@@ -0,0 +1,193 @@
++"""Bounded scripts backup serviced from the existing Owner RX/tick."""
++import base64
++from secrets import randbits
++from threading import RLock
++from types import coroutine
++
++from .scripts_ftp import FTPError, HEADER, MAX_FILE, ScriptsFTP
++from .stage3 import Refused
++
++OPS = frozenset({'S3_FTP_START', 'S3_FTP_RESULT', 'S3_FTP_FILE', 'S3_FTP_CHUNK', 'S3_FTP_RELEASE'})
++MAX_TOTAL = 2 * 1024 * 1024
++MAX_FILES = 128
++MAX_TIME = 240
++CHUNK = 768
++PEER = (1, 1)
++
++
++@coroutine
++def exchange(request):
++    # Suspend until a later tick supplies a reply. No separate event loop.
++    return (yield request)
++
++
++async def inventory(ftp):
++    todo = [()]
++    directories = set()
++    files = {}
++    while todo:
++        directory = todo.pop()
++        directories.add(directory)
++        for name, size in (await ftp.list_directory(directory)).items():
++            path = (*directory, name)
++            if size is None:
++                todo.append(path)
++            else:
++                files[path] = size
++            if len(files) + len(todo) > MAX_FILES:
++                raise FTPError('inventory limit')
++        # Empty directories count against the traversal budget as well.
++        if len(directories) > MAX_FILES:
++            raise FTPError('directory limit')
++    return files, directories
++
++
++class ScriptsBackup:
++    def __init__(self, clock, allowed, peer_alive, local):
++        self.clock, self.allowed, self.peer_alive = clock, allowed, peer_alive
++        self.local = local
++        self.lock = RLock()
++        self.sequence = randbits(16)
++        self.peer = self.task = self.request = self.reply = None
++        self.sent = False
++        self.deadline = self.reply_deadline = self.next_send = self.retention = 0
++        self.result = 'IDLE'
++        self.reason = None
++        self.files = []
++        self.unresolved = False
++        self.ftp = None
++
++    def guard(self):
++        if not self.allowed() or self.clock() >= self.deadline:
++            raise FTPError('FTP_GUARD_OR_DEADLINE')
++
++    def operate_guard(self):
++        self.guard()
++        if not self.peer_alive(self.peer):
++            raise FTPError('FTP_PEER_GONE')
++
++    async def run(self, budget):
++        self.operate_guard()
++        if not (await exchange(None)) & 0x20:
++            raise FTPError('FTP_CAPABILITY_ABSENT')
++        first, directories = await inventory(self.ftp)
++        total = sum(first.values())
++        # Count protocol overhead before opening any file.
++        if total > budget or any(size > MAX_FILE for size in first.values()):
++            raise FTPError('FTP_SIZE_LIMIT')
++        for parts, size in sorted(first.items()):
++            contents, digest, crc = await self.ftp.fetch_file(parts, size)
++            if crc is None:
++                other, repeated, _ = await self.ftp.fetch_file(parts, size)
++                if repeated != digest or other != contents:
++                    raise FTPError('FTP_REPEAT_MISMATCH')
++            self.files.append((parts, contents, digest, crc))
++        if (first, directories) != await inventory(self.ftp):
++            raise FTPError('FTP_TREE_CHANGED')
++        self.operate_guard()
++
++    def _finish(self, reason):
++        self.result = reason
++        self.retention = self.clock() + 180
++        self.unresolved |= self.ftp.session_uncertain
++        self.sequence = self.ftp._sequence
++        self.task = self.request = self.reply = None
++        if reason != 'COMPLETE':
++            self.files.clear()
++
++    def _advance(self, value=None, error=None):
++        try:
++            self.request = self.task.throw(error) if error else self.task.send(value)
++        except StopIteration:
++            self._finish('COMPLETE')
++        except (FTPError, OSError) as error:
++            self.reason = str(error) if isinstance(error, FTPError) else 'FTP_IO_ERROR'
++            self._finish('INCOMPLETE')
++        self.sent = False
++        self.reply = None
++
++    def dispatch(self, peer, op, payload, *, other_busy=False):
++        with self.lock:
++            if op == 'S3_FTP_START':
++                budget = payload.get('budget')
++                retained = (self.peer is not None and self.clock() < self.retention
++                            and self.peer_alive(self.peer))
++                if (self.task is not None or retained or self.unresolved or other_busy or not self.allowed()
++                        or not self.peer_alive(peer) or set(payload) != {'budget'}
++                        or type(budget) is not int or not 0 <= budget <= MAX_TOTAL):
++                    raise Refused('FTP_START_REFUSED')
++                self.peer, self.deadline = peer, self.clock() + MAX_TIME
++                self.files.clear()
++                self.result = 'BUSY'
++                self.reason = None
++                self.ftp = ScriptsFTP(exchange, self.operate_guard, self.sequence)
++                self.task = self.run(budget)
++                self._advance()
++                return {'queued': True}
++            if (peer != self.peer or not self.peer_alive(peer) or not self.allowed()
++                    or (self.task is None and self.clock() >= self.retention)):
++                raise Refused('FTP_PEER_OR_GUARD')
++            if op == 'S3_FTP_RESULT' and not payload:
++                return dict(status=self.result, count=len(self.files) if self.result == 'COMPLETE' else 0,
++                            unresolved=self.unresolved, reason=self.reason)
++            if op == 'S3_FTP_RELEASE' and not payload and self.task is None:
++                self.files.clear()
++                self.peer = None
++                return {'released': True}
++            index = payload.get('index')
++            if self.result != 'COMPLETE' or type(index) is not int or not 0 <= index < len(self.files):
++                raise Refused('FTP_BACKUP_UNAVAILABLE')
++            parts, data, digest, crc = self.files[index]
++            if op == 'S3_FTP_FILE' and set(payload) == {'index'}:
++                return dict(parts=parts, size=len(data), sha256=digest, crc32=crc)
++            offset = payload.get('offset')
++            if (op == 'S3_FTP_CHUNK' and set(payload) == {'index', 'offset'}
++                    and type(offset) is int and 0 <= offset < len(data)):
++                return dict(offset=offset, base64=base64.b64encode(data[offset:offset+CHUNK]).decode())
++            raise Refused('FTP_INVALID_REQUEST')
++
++    def tick(self, send, *, connected, priority_clear):
++        with self.lock:
++            if self.task is None:
++                if self.peer is not None and (self.clock() >= self.retention or not self.peer_alive(self.peer)):
++                    self.files.clear()
++                    self.peer = None
++                return
++            now = self.clock()
++            if not connected or not self.allowed() or not self.peer_alive(self.peer) or now >= self.deadline:
++                self._advance(error=FTPError('FTP_GUARD_LOST'))
++                return
++            if self.reply is not None:
++                self._advance(self.reply)
++                return
++            if self.sent and now >= self.reply_deadline:
++                # A file coroutine can enqueue its own TerminateSession here.
++                self._advance(error=FTPError('FTP_TIMEOUT'))
++                return
++            if self.sent or not priority_clear or now < self.next_send:
++                return
++            try:
++                self.operate_guard()
++                send(self.request)
++                self.sent = True
++                self.reply_deadline = now + 1
++                self.next_send = now + .025
++            except (FTPError, OSError):
++                self._advance(error=FTPError('FTP_SEND_FAILED'))
++
++    def observe(self, msg):
++        with self.lock:
++            if (self.task is None or not self.sent or self.reply is not None
++                    or self.clock() >= self.reply_deadline
++                    or (msg.get_srcSystem(), msg.get_srcComponent()) != PEER):
++                return
++            if self.request is None:
++                if msg.get_type() == 'AUTOPILOT_VERSION':
++                    self.reply = int(msg.capabilities)
++                return
++            if (msg.get_type() != 'FILE_TRANSFER_PROTOCOL' or msg.target_network != 0
++                    or (msg.target_system, msg.target_component) != self.local):
++                return
++            data = bytes(msg.payload)
++            if len(data) == 251 and HEADER.unpack_from(data)[0] == ((HEADER.unpack_from(self.request)[0] + 1) & 0xffff):
++                self.reply = data
+--- a/disarm_control/ipc.py
++++ b/disarm_control/ipc.py
+@@ -16,7 +16,9 @@
+ from .stage3 import Refused
+ from .stage3_operator import OPS
+ 
+-STAGE3_OPERATIONS = OPS
++from .ftp_backup import OPS as FTP_OPS
++
++STAGE3_OPERATIONS = OPS | FTP_OPS
+ 
+ LIMIT = 4096
+ MISSION_STATUS_REPLY_LIMIT = 8192
+@@ -126,9 +128,10 @@
+ 
+ class OwnerServer:
+     """Explicit start only, one bounded request at a time, no unlink-on-start."""
+-    def __init__(self, engine, path, *, allowed_uid=None, policy=None, stop_operations=None, arm_operations=None, disarm_request=None, brake_operations=None, mission_operations=None, stage3_dispatch=None):
++    def __init__(self, engine, path, *, allowed_uid=None, policy=None, stop_operations=None, arm_operations=None, disarm_request=None, brake_operations=None, mission_operations=None, stage3_dispatch=None, ftp_enabled=False):
+         self.engine, self.path = engine, Path(path)
+         self.stage3_dispatch = stage3_dispatch
++        self.stage3_operations = STAGE3_OPERATIONS if ftp_enabled else OPS
+         self.stop_operations = stop_operations or {}
+         self.arm_operations = arm_operations or {}
+         if set(self.arm_operations) - {'ARM', 'ARM_READY', 'ARM_STATUS'}:
+@@ -166,7 +169,7 @@
+                     operation = body.get('op')
+                     mission = type(operation) is str and operation in owner.mission_operations
+                     stage3 = (owner.stage3_dispatch is not None and type(operation) is str
+-                              and operation in STAGE3_OPERATIONS)
++                              and operation in owner.stage3_operations)
+                     fields = {'op', 'actor_id', 'actor', 'request_id', 'nonce'}
+                     if mission or stage3:
+                         fields.add('payload')
+--- /dev/null
++++ b/disarm_control/scripts_ftp.py
+@@ -0,0 +1,158 @@
++"""Read-only FTP protocol core. The Owner supplies authorization and transport."""
++from hashlib import sha256
++import re
++from struct import Struct
++from zlib import crc32
++
++ROOT = "/APM/scripts"
++TERMINATE, LIST, OPEN_RO, READ, CRC = 1, 3, 4, 5, 14
++ACK, NAK, EOF, UNKNOWN_COMMAND = 128, 129, 6, 7
++HEADER = Struct("<HBBBBBBI")
++U32 = Struct("<I")
++MAX_DATA = 239
++MAX_FILE = 1024 * 1024
++MAX_ENTRIES = 512
++SEGMENT = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9_. -]*")
++
++
++class FTPError(RuntimeError):
++    pass
++
++
++def confined_path(parts):
++    if not isinstance(parts, tuple) or len(parts) > 12:
++        raise FTPError("invalid path depth")
++    for part in parts:
++        if (not isinstance(part, str) or not SEGMENT.fullmatch(part)
++                or part.endswith((" ", "."))):
++            raise FTPError("unsupported path segment")
++    path = "/".join((ROOT, *parts)).encode("ascii")
++    if len(path) >= MAX_DATA:
++        raise FTPError("path too long")
++    return path
++
++
++def ardupilot_crc(data):
++    return crc32(data, 0xffffffff) ^ 0xffffffff
++
++
++class ScriptsFTP:
++    """One instance per exclusive Owner operation. Invoke top-level methods serially.
++
++    exchange awaits one bounded transaction on the existing Owner connection.
++    It must validate the MAVLink envelope (peer, destination, link and message
++    ID), prioritize telemetry, and recheck the guard at actual send time.
++    The Owner supplies a nonconflicting initial FTP sequence.
++    """
++
++    def __init__(self, exchange, guard, sequence):
++        self._exchange = exchange
++        self._guard = guard
++        self._sequence = sequence & 0xffff
++        self.session_uncertain = False
++
++    async def _request(self, operation, *, parts=(), offset=0, count=0):
++        if operation not in (TERMINATE, LIST, OPEN_RO, READ, CRC):
++            raise FTPError("operation forbidden")
++        path = confined_path(parts) if operation in (LIST, OPEN_RO, CRC) else b""
++        self._guard()
++        seq = self._sequence
++        self._sequence = (seq + 2) & 0xffff
++        # Rover uses the same client-selected session ID in its reply.
++        packet = HEADER.pack(seq, 0, operation, count or len(path), 0, 0, 0, offset)
++        if operation == OPEN_RO:
++            self.session_uncertain = True
++        reply = await self._exchange((packet + path).ljust(251, b"\0"))
++        if len(reply) != 251:
++            raise FTPError("invalid MAVFTP payload length")
++        number, session, opcode, size, request, burst, _, reply_offset = HEADER.unpack_from(reply)
++        if (number != (seq + 1) & 0xffff or session != 0 or request != operation
++                or burst or size > MAX_DATA):
++            raise FTPError("uncorrelated MAVFTP reply")
++        data = reply[HEADER.size:HEADER.size + size]
++        if opcode == NAK and size in (1, 2):
++            if operation == OPEN_RO:
++                self.session_uncertain = False
++            return opcode, data
++        if opcode != ACK or reply_offset != offset:
++            raise FTPError("unexpected MAVFTP reply")
++        return opcode, data
++
++    async def list_directory(self, parts=()):
++        confined_path(parts)
++        if self.session_uncertain:
++            raise FTPError("unresolved FTP session")
++        offset = 0
++        entries = {}
++        seen = set()
++        while True:
++            opcode, data = await self._request(LIST, parts=parts, offset=offset)
++            if opcode == NAK:
++                if data == bytes([EOF]):
++                    self._guard()
++                    return entries
++                raise FTPError("directory listing rejected")
++            if not data.endswith(b"\0"):
++                raise FTPError("incomplete directory page")
++            for entry in data[:-1].split(b"\0"):
++                offset += 1
++                if offset > MAX_ENTRIES:
++                    raise FTPError("directory entry limit")
++                if entry in (b"D.", b"D.."):
++                    continue
++                kind, name, raw_size = self._entry(entry)
++                confined_path((*parts, name))
++                if name.casefold() in seen:
++                    raise FTPError("duplicate or case-aliased entry")
++                seen.add(name.casefold())
++                entries[name] = int(raw_size) if kind == "F" else None
++
++    @staticmethod
++    def _entry(entry):
++        try:
++            text = entry.decode("ascii")
++        except UnicodeDecodeError as error:
++            raise FTPError("unsupported directory entry encoding") from error
++        name, sep, size = text[1:].partition("\t")
++        if text.startswith("D") and not sep:
++            return "D", name, ""
++        if text.startswith("F") and sep and size.isdecimal() and len(size) <= 10:
++            return "F", name, size
++        raise FTPError("unsupported directory entry")
++
++    async def fetch_file(self, parts, listed_size):
++        confined_path(parts)
++        if not parts or not 0 <= listed_size <= MAX_FILE or self.session_uncertain:
++            raise FTPError("file outside limits or unresolved FTP session")
++        contents = bytearray()
++        try:
++            opcode, data = await self._request(OPEN_RO, parts=parts)
++            if opcode != ACK or len(data) != U32.size or U32.unpack(data)[0] != listed_size:
++                raise FTPError("file open failed or size changed")
++            while len(contents) < listed_size:
++                offset = len(contents)
++                size = min(MAX_DATA, listed_size - offset)
++                opcode, data = await self._request(READ, offset=offset, count=size)
++                if opcode != ACK or len(data) != size:
++                    raise FTPError("short or rejected read")
++                contents.extend(data)
++        finally:
++            if self.session_uncertain:
++                # A failed guard prevents even cleanup traffic. Retain the
++                # unresolved-session flag and let the Owner report the failure.
++                opcode, data = await self._request(TERMINATE)
++                if opcode != ACK or data:
++                    raise FTPError("session termination not verified")
++                self.session_uncertain = False
++
++        opcode, data = await self._request(CRC, parts=parts)
++        self._guard()
++        if opcode == ACK and len(data) == U32.size:
++            remote_crc = U32.unpack(data)[0]
++            if remote_crc != ardupilot_crc(contents):
++                raise FTPError("remote CRC mismatch")
++        elif opcode == NAK and data == bytes([UNKNOWN_COMMAND]):
++            remote_crc = None
++        else:
++            raise FTPError("CRC request failed")
++        return bytes(contents), sha256(contents).hexdigest(), remote_crc
+--- a/owner/stop_latch_test/hold_runner.py
++++ b/owner/stop_latch_test/hold_runner.py
+@@ -57,7 +57,13 @@
+     parser.add_argument('--stage3-operator-mode', choices=('B1', 'B2'))
+     parser.add_argument('--stage3-bench-approval-file')
+     parser.add_argument('--stage3-lua-attestation-file')
++    parser.add_argument('--stage3-ftp-approval-file')
+     args = parser.parse_args(argv)
++    if args.stage3_ftp_approval_file and args.stage3_operator_mode != 'B2':
++        parser.error('FTP requires B2 and independent boot-bound authorization')
++    if args.stage3_ftp_approval_file and any((args.navigation_hold_watchdog, args.diagnostic_params, args.diagnostic_brake_params,
++            args.export_pixhawk_params)):
++        parser.error('FTP excludes extra maintenance actions')
+     if args.stage3_operator_mode and (not args.brake_hold_only or not args.navigation_readback
+             or args.nav_bench_tx or args.nav_mission_tx or args.externalnav_tx
+             or args.web_arm_boot_id or args.local_ekf_bench_action or args.ch6_mode_change
+@@ -173,6 +179,7 @@
+     mission = None
+     arm = None
+     operator = None
++    ftp = None
+     if args.web_disarm_socket:
+         from disarm_control.engine import DisarmEngine, disarm_sender
+         from disarm_control.ipc import BRAKE_OPERATIONS, MISSION_OPERATIONS, OwnerServer, SocketPolicy
+@@ -186,6 +193,8 @@
+             diagnostics.observe(message)
+             if operator is not None:
+                 operator.observe(message)
++            if ftp is not None:
++                ftp.observe(message)
+             if mission is not None:
+                 mission.observe(message)
+         reader.command_observer = observe
+@@ -395,6 +404,53 @@
+             operator = BenchOperator(args.stage3_operator_mode, reader.clock, operator_guard,
+                                      operator_status, pi_boot=pi_boot, provenance=approved_lua)
+ 
++        if args.stage3_ftp_approval_file:
++            from disarm_control.ftp_backup import OPS as FTP_OPS, ScriptsBackup
++            from disarm_control.ipc import peer_generation
++            from disarm_control.stage3 import Refused
++
++            def ftp_allowed():
++                return (root_attested(args.stage3_ftp_approval_file, 'B2-FTP ISOLATED ' + pi_boot)
++                        and operator_guard() and nav.snapshot()['sent'] == 0)
++
++            def ftp_peer_alive(peer):
++                uid, pid, generation = peer
++                try:
++                    return uid == args.web_disarm_client_uid and peer_generation(pid) == generation
++                except (OSError, ValueError, IndexError):
++                    return False
++
++            ftp = ScriptsBackup(reader.clock, ftp_allowed, ftp_peer_alive,
++                                (encoder.srcSystem, encoder.srcComponent))
++
++            def ftp_send(fd, payload):
++                if not ftp_allowed() or os.get_blocking(fd):
++                    raise OSError('FTP guard refused send')
++                if payload is None:
++                    message = mav.MAVLink_command_long_message(
++                        1, 1, mav.MAV_CMD_REQUEST_MESSAGE, 0,
++                        mav.MAVLINK_MSG_ID_AUTOPILOT_VERSION, 0, 0, 0, 0, 0, 0)
++                else:
++                    message = mav.MAVLink_file_transfer_protocol_message(0, 1, 1, payload)
++                packet = message.pack(encoder)
++                if os.write(fd, packet) != len(packet):
++                    raise OSError('partial FTP write')
++                encoder.seq = (encoder.seq + 1) % 256
++
++            def dispatch(peer, op, payload):
++                with operator.lock:
++                    if op in FTP_OPS:
++                        return ftp.dispatch(peer, op, payload,
++                                            other_busy=operator.job is not None or operator.logs.busy)
++                    if op == 'S3_BENCH_REQUEST' and ftp.task is not None:
++                        raise Refused('FTP_BUSY')
++                    result = operator.dispatch(peer, op, payload)
++                    if op == 'S3_BENCH_STATUS':
++                        result.update(mode='B2-FTP', ftp_authorized=ftp_allowed())
++                    return result
++        else:
++            dispatch = operator.dispatch if operator is not None else None
++
+         def owner_tick(fd):
+             guarded.tick(fd)
+             if brake is not None:
+@@ -414,6 +470,10 @@
+                 operator.tick(lambda op, *fields: operator_send(fd, op, *fields),
+                               connected=reader.state == 'READING' and reader.source == (1, 1),
+                               priority_clear=not bench.disarm_pending())
++            if ftp is not None:
++                ftp.tick(lambda payload: ftp_send(fd, payload),
++                         connected=reader.state == 'READING' and reader.source == (1, 1),
++                         priority_clear=not bench.disarm_pending())
+             if nav is not None:
+                 nav.tick(fd,command_pending=bench.disarm_pending())
+             if mission is not None:
+@@ -430,7 +490,7 @@
+             mission_operations={op: partial(mission.command, op) for op in MISSION_OPERATIONS}
+             if mission is not None else None,
+             arm_operations={'ARM': arm.request, 'ARM_READY': arm.ready, 'ARM_STATUS': arm.status} if arm else None,
+-            stage3_dispatch=operator.dispatch if operator is not None else None,
++            stage3_dispatch=dispatch, ftp_enabled=ftp is not None,
+             disarm_request=priority_disarm,
+             allowed_uid=args.web_disarm_client_uid,
+             policy=SocketPolicy(os.getuid(), args.web_disarm_client_gid, 0o710, 0o660))

@@ -49,6 +49,17 @@ b7508e0bd4ccef213ac254fdc53f38235de7dd68275b2be1e1716c03eb48eeac  ./06-operator/
 c511c8d309fed418a1a4dc2a98a9b8a82306dd7054bb506721ef05756004edaf  ./06-operator/MANIFEST.sha256
 f3554641400508009ae34ccb5d68807321fdac0658c065ce687aef86a022aa63  ./06-operator/OPERATOR_CANDIDATE.patch
 5410203482314fe7013872c36c7a3943ddd76c7bc747cd4754efc6c11062b9ae  ./06-operator/TEST_REPORT.md
+dca889a265a09cbadf65977bacaf456681a5e09fd4d92c4bd252dda3a381b961  ./06-operator/b2-ftp-overlay/BASE_SHA256
+f41b7e3a616ca3952c2f55ff38420f0d990bd39a0726df207d9a48010fc03fce  ./06-operator/b2-ftp-overlay/OPERATOR.md
+2f5a6572e6b6bdeff6fc80cee807ed1b82e156b8a37a1207b0e3f9235ceee002  ./06-operator/b2-ftp-overlay/TEST-REPORT.md
+908d061943298fa673c9d343a9f9b36ee6cfaf9b564517f8d003bd12cc424219  ./06-operator/b2-ftp-overlay/backup_client.py
+5b0f07e8724a2d459efc2244511e77a6e68a06c6cf9460d2b64b3d3a0744bc74  ./06-operator/b2-ftp-overlay/deploy.sh
+572f37e326cfbf572f28f2ec04a3fac81cdb99ac6b163f4db8d7ef4d730ed0ff  ./06-operator/b2-ftp-overlay/integration.patch
+80675f46107deb4484b60f17075277d80a760b66dfb65788afad80c334db7cc1  ./06-operator/b2-ftp-overlay/offline_tests.py
+c5571bc6d4cd1e20582b2257225f00ed6b25ac5efacfd5fdaed154a73b190ac5  ./06-operator/b2-ftp-overlay/profile.py
+287ac73e1ba7318e024a26499e69fc67f4ba40d7da43b2b77b3e9984eeb9ed06  ./06-operator/b2-ftp-overlay/test_scripts_ftp.py
+3ccbb91b70f3d332308d8f4b19a92d50ea3b750a57a27d72623b79fcbf526006  ./06-operator/b2-ftp-overlay/test_transaction.sh
+b0bac7e3f59c935914b1f2a43bff4281dcf82af1298364cca1f588105dc3ba20  ./06-operator/b2-ftp-overlay/transaction.sh
 f366f56abb260618b12fdadd2d065af811dc939dc5422306d4ce13e06ebe22f5  ./06-operator/integration.txt
 097c09d1b9a6f4f14e72bdaebb360a2b5514d796705d83fe7f1cd247430de7f1  ./06-operator/mavftp-readonly/README.md
 1103c3e700147cd4463fb611bc3f407c207dfeb2f38081d25550640354669447  ./06-operator/mavftp-readonly/scripts_ftp.py
