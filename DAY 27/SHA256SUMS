@@ -53,6 +53,7 @@ f3554641400508009ae34ccb5d68807321fdac0658c065ce687aef86a022aa63  ./06-operator/
 9e78ab1dec0cb1415ab1c54c7c44aa7bdd59a5df39fe7585566c53c48b51edf3  ./06-operator/b2-ftp-overlay/B2-FTP-LIVE-RESULT.md
 dca889a265a09cbadf65977bacaf456681a5e09fd4d92c4bd252dda3a381b961  ./06-operator/b2-ftp-overlay/BASE_SHA256
 f41b7e3a616ca3952c2f55ff38420f0d990bd39a0726df207d9a48010fc03fce  ./06-operator/b2-ftp-overlay/OPERATOR.md
+aca3e14d246f4614d4dcabb9429bca9ac6494e9492fcbff25134ea18c72f71de  ./06-operator/b2-ftp-overlay/SHA256SUMS
 2f5a6572e6b6bdeff6fc80cee807ed1b82e156b8a37a1207b0e3f9235ceee002  ./06-operator/b2-ftp-overlay/TEST-REPORT.md
 908d061943298fa673c9d343a9f9b36ee6cfaf9b564517f8d003bd12cc424219  ./06-operator/b2-ftp-overlay/backup_client.py
 5b0f07e8724a2d459efc2244511e77a6e68a06c6cf9460d2b64b3d3a0744bc74  ./06-operator/b2-ftp-overlay/deploy.sh
@@ -67,6 +68,12 @@ c5571bc6d4cd1e20582b2257225f00ed6b25ac5efacfd5fdaed154a73b190ac5  ./06-operator/
 3ccbb91b70f3d332308d8f4b19a92d50ea3b750a57a27d72623b79fcbf526006  ./06-operator/b2-ftp-overlay/test_transaction.sh
 b0bac7e3f59c935914b1f2a43bff4281dcf82af1298364cca1f588105dc3ba20  ./06-operator/b2-ftp-overlay/transaction.sh
 f366f56abb260618b12fdadd2d065af811dc939dc5422306d4ce13e06ebe22f5  ./06-operator/integration.txt
+ef866423fed095d7581a5e34fd3128a1cb9bfed1b7f74ff904b3fe405fb95116  ./06-operator/log-disarmed-transaction/PROCEDURE.md
+c1fd14675e0bad15161118f28e478fdd9c8f6f8f3522a69f3bf3fda8f20a9a31  ./06-operator/log-disarmed-transaction/SHA256SUMS
+ec1ee9e68acf9f062d68dc5a5242135746601c354aeae1687a3b7f7502171998  ./06-operator/log-disarmed-transaction/dataflash_proof.py
+e87a825189057833dcbd90fddbe976da9a5f220f9ea02653a98905c785ad3ccd  ./06-operator/log-disarmed-transaction/log_disarmed.py
+929e9910de355e68809e63872150f62f15069316775db3f1ff25b3daddc88610  ./06-operator/log-disarmed-transaction/owner_port.py
+c87d85882bd2de9ae9578d7bd2b6ce74e67c81df4c38c68930621f27d6c9bc4c  ./06-operator/log-disarmed-transaction/test_log_disarmed.py
 097c09d1b9a6f4f14e72bdaebb360a2b5514d796705d83fe7f1cd247430de7f1  ./06-operator/mavftp-readonly/README.md
 1103c3e700147cd4463fb611bc3f407c207dfeb2f38081d25550640354669447  ./06-operator/mavftp-readonly/scripts_ftp.py
 92c806e6533e7d8ae357c9744dcd004bfa25445f9213f71bb909a2fcd46e330c  ./06-operator/mavftp-readonly/test_scripts_ftp.py
