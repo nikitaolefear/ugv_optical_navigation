@@ -215,7 +215,7 @@
 +            return dict(row)
 --- /dev/null
 +++ b/disarm_control/log_discovery.py
-@@ -0,0 +1,53 @@
+@@ -0,0 +1,54 @@
 +"""Bounded metadata-only collector for the existing Owner's parameter stream."""
 +import hashlib
 +
@@ -225,7 +225,8 @@
 +
 +MAX_ENTRIES = 4096
 +MAX_FRAMES = MAX_ENTRIES * 3
-+LIST_SECONDS = 60
++SCAN_SECONDS = 480
++INDEX_INTERVAL = .1
 +
 +
 +class Inventory:
@@ -271,7 +272,7 @@
 +        return True
 --- /dev/null
 +++ b/disarm_control/log_queue.py
-@@ -0,0 +1,224 @@
+@@ -0,0 +1,301 @@
 +"""Single-slot handoff to the existing Owner tick. Disk work stays in worker."""
 +from hashlib import sha256
 +import os
@@ -282,7 +283,7 @@
 +
 +from .log_disarmed import GUARDS, Journal, Refused, Transaction, identity
 +from .owner_port import LogDisarmedPort, TARGET, mav
-+from .log_discovery import Inventory, LIST_SECONDS
++from .log_discovery import INDEX_INTERVAL, MAX_FRAMES, SCAN_SECONDS, Inventory
 +
 +OPS = frozenset({'S3_LOG_STATUS', 'S3_LOG_BEGIN', 'S3_LOG_RESTORE', 'S3_LOG_RECOVER', 'S3_LOG_RESULT', 'S3_LOG_DISCOVER'})
 +QUIET = .30
@@ -290,10 +291,17 @@
 +
 +class LogQueue:
 +    def __init__(self, clock, directory, marker, pi_boot, port_path, gateway_uid, root_attested,
-+                 peer_alive, safety):
++                 peer_alive, safety, telemetry=None):
 +        self.clock, self.marker, self.port_path = clock, marker, port_path
 +        self.pi_boot, self.root_attested, self.peer_alive = pi_boot.replace('-', ''), root_attested, peer_alive
 +        self.safety = safety
++        self.telemetry = telemetry
++        self.failure = None
++        self.inventory = None
++        self.last_param_received = None
++        self.param_frames = 0
++        self.scan_frames = 0
++        self.next_index_send = float("-inf")
 +        self.fault = False
 +        self.lock = threading.Lock()
 +        self.slot = None
@@ -321,27 +329,75 @@
 +        record = self.discovery
 +        return record if record is not None and record['identity'] == self.current else None
 +
++    def snapshot_failure(self, code, sample=None, state=None):
++        if self.failure is not None:
++            return
++        if sample is None:
++            sample = self.telemetry() if self.telemetry else {}
++        if state is None:
++            state = self.safety()
++        counters = self.inventory
++        self.failure = dict(reason=code, at=self.clock(),
++                            last_param_at=self.last_param_received,
++                            received=self.scan_frames if counters else 0,
++                            unique=len(counters.entries) if counters else 0,
++                            **{k: sample.get(k) for k in ('servo5', 'servo6', 'pwm_age', 'heartbeat_age', 'tx_sent')},
++                            **{k: state.get(k) for k in ('hold','disarmed','inhibit','stop_latch','tx_disabled','tx_zero')})
++
 +    def discover(self, peer):
 +        current = identity(self.identity())
++        inventory = Inventory()
++        self.inventory = inventory
++        deadline = self.clock() + SCAN_SECONDS
 +
 +        def guard():
 +            state = self.safety()
-+            if (self.identity() != current or not self.authorized(peer, 'discover', '-', current)
-+                    or any(state.get(key) is not True for key in GUARDS)):
-+                raise Refused('LOG_DISCOVERY_GUARD_LOST')
++            sample = self.telemetry() if self.telemetry else {}
++            age = sample.get('pwm_age')
 +
++            def fail(code):
++                self.snapshot_failure(code, sample, state)
++                raise Refused(code)
++
++            if self.identity() != current:
++                fail('LOG_DISCOVERY_SESSION_CHANGED')
++            if not self.authorized(peer, 'discover', '-', current):
++                fail('LOG_DISCOVERY_AUTHORIZATION_REVOKED')
++            for key in GUARDS:
++                if state.get(key) is not True:
++                    fail('LOG_DISCOVERY_' + key.upper())
++            if (not sample.get('pwm_current') or age is None or not 0 <= age < 3):
++                fail('LOG_DISCOVERY_PWM_NOT_FRESH')
++            if sample.get('servo5') != 999 or sample.get('servo6') != 999:
++                fail('LOG_DISCOVERY_PWM_NOT_HOLD')
++            if self.scan_frames > MAX_FRAMES:
++                fail('LOG_DISCOVERY_FRAME_LIMIT')
++            if self.clock() >= deadline:
++                fail('LOG_DISCOVERY_DEADLINE')
++
++        frame_start = self.param_frames
 +        guard()
-+        inventory = Inventory()
-+        self.exchange(mav.MAVLink_param_request_list_message(*TARGET), guard, LIST_SECONDS, inventory.add)
++        offset = 0
++        while inventory.count is None or offset < inventory.count:
++            def accept(message):
++                if message.param_index != offset:
++                    return False
++                inventory.add(message)
++                return True
++
++            self.exchange(mav.MAVLink_param_request_read_message(*TARGET, b'', offset),
++                          guard, min(2.0, deadline-self.clock()), accept,
++                          quiet=QUIET if offset == 0 else 0, paced=True)
++            offset += 1
 +        index, kind, value = inventory.target
 +        port = LogDisarmedPort(self.exchange, self.identity, self.safety, index)
-+        # This separate request must follow a quiet window after the full list.
 +        readback = port.read_log_disarmed(guard, expected_count=inventory.count)
 +        guard()
 +        if readback != value:
 +            raise Refused('LOG_DISCOVERY_READBACK_MISMATCH')
 +        return dict(identity=current, param_id='LOG_DISARMED', index=index,
-+                    param_type=kind, value=readback, count=inventory.count)
++                    param_type=kind, value=readback, count=inventory.count,
++                    unique=len(inventory.entries), received=self.param_frames-frame_start)
 +
 +    def observe(self, message):
 +        if (message.get_srcSystem(), message.get_srcComponent()) != (1, 1):
@@ -357,8 +413,15 @@
 +        if kind != 'PARAM_VALUE':
 +            return
 +        with self.lock:
-+            self.last_param = self.clock()
++            self.last_param_received = self.last_param = self.clock()
++            self.param_frames += 1
 +            slot = self.slot
++            if self.job == 'discover':
++                self.scan_frames += 1
++                if self.scan_frames > MAX_FRAMES and slot and not slot['done'].is_set():
++                    slot['error'] = Refused('LOG_DISCOVERY_FRAME_LIMIT')
++                    slot['done'].set()
++                    return
 +            if not (slot and not slot['done'].is_set() and slot.get('sent')
 +                    and self.clock() < slot['expires'] and slot['accept'] is not None):
 +                return
@@ -370,13 +433,13 @@
 +                slot['error'] = error
 +                slot['done'].set()
 +
-+    def exchange(self, message, check, timeout, accept):
++    def exchange(self, message, check, timeout, accept, *, quiet=QUIET, paced=False):
 +        done = threading.Event()
 +        with self.lock:
 +            if self.slot is not None:
 +                raise Refused('LOG_QUEUE_BUSY')
 +            slot = dict(message=message, check=check, expires=self.clock()+timeout,
-+                        accept=accept, done=done)
++                        accept=accept, done=done, quiet=quiet, paced=paced)
 +            self.slot = slot
 +        try:
 +            if not done.wait(timeout):
@@ -425,12 +488,16 @@
 +                slot['check']()
 +                if slot.get('sent') or not priority_clear:
 +                    return
-+                if slot['accept'] is not None and now-self.last_param < QUIET:
++                if slot['paced'] and now < self.next_index_send:
++                    return
++                if slot['accept'] is not None and now-self.last_param < slot['quiet']:
 +                    return
 +                slot['check']()
 +                if self.clock() >= slot['expires']:
 +                    raise Refused('LOG_REQUEST_EXPIRED')
 +                send(slot['message'])
++                if slot['paced']:
++                    self.next_index_send = self.clock() + INDEX_INTERVAL
 +                slot['sent'] = True
 +                self.last_param = self.clock()
 +                if slot['accept'] is None:
@@ -438,6 +505,8 @@
 +            except Exception as error:
 +                if slot.get('sent'):
 +                    self.fault = True
++                if self.job == 'discover':
++                    self.snapshot_failure(str(error) if isinstance(error, Refused) else 'LOG_DISCOVERY_IO')
 +                slot['error'] = error
 +                slot['done'].set()
 +
@@ -452,7 +521,7 @@
 +        return dict(profile='B2-LOG', identity=self.identity(), active=active or other_job,
 +                    queued=queued + int(other_job is not None and not logs_busy), transport_fault=self.fault, unfinished=pending and {k: pending.get(k) for k in ('transaction','phase')},
 +                    recovery_required=bool(pending) and active is None,
-+                    discovery=self.verified(),
++                    discovery=self.verified(), failure_capture=self.failure,
 +                    dataflash='ACTIVE_OR_END_OWED' if logs_busy else 'IDLE')
 +
 +    def dispatch(self, peer, op, payload, *, other_job, logs_busy):
@@ -469,6 +538,9 @@
 +            proof = self.verified()
 +            if action == 'discover':
 +                self.discovery = None
++                self.failure = None
++                self.inventory = None
++                self.scan_frames = 0
 +            elif proof is None:
 +                raise Refused('LOG_DISCOVERY_REQUIRED')
 +            self.job, self.peer, self.result = action, peer, None
@@ -488,11 +560,17 @@
 +                                              authorized=authorized, profile='B2-LOG')
 +                    row = transaction.execute(peer, action, payload)
 +                    result = {k: row[k] for k in ('transaction', 'phase', 'baseline')}
-+            except (Refused, TimeoutError, OSError, ValueError, KeyError, TypeError):
-+                result = {'error':'LOG_FAILED_CHECK_STATUS_AND_JOURNAL'}
++            except (Refused, TimeoutError, OSError, ValueError, KeyError, TypeError) as error:
++                if action == 'discover':
++                    self.snapshot_failure(str(error) if isinstance(error, Refused) else
++                                          'LOG_DISCOVERY_TIMEOUT' if isinstance(error, TimeoutError) else 'LOG_DISCOVERY_IO')
++                    result = {'error':self.failure['reason'], 'failure_capture':self.failure}
++                else:
++                    result = {'error':'LOG_FAILED_CHECK_STATUS_AND_JOURNAL'}
 +            finally:
 +                with self.lock:
 +                    self.result = locals().get('result', {'error':'LOG_WORKER_INTERRUPTED'})
++                    self.inventory = None
 +                    self.job = None
 +        threading.Thread(target=run, daemon=True, name='log-disarmed').start()
 +        return {'queued':True}
@@ -583,7 +661,7 @@
              if mission is not None:
                  mission.observe(message)
          reader.command_observer = observe
-@@ -395,6 +405,52 @@
+@@ -395,6 +405,63 @@
              operator = BenchOperator(args.stage3_operator_mode, reader.clock, operator_guard,
                                       operator_status, pi_boot=pi_boot, provenance=approved_lua)
  
@@ -609,9 +687,20 @@
 +                            tx_zero=nav.snapshot()['sent'] == 0,
 +                            exclusive_owner=s['hold_only'] and reader.state == 'READING')
 +
++            def log_telemetry():
++                sample = diagnostics.servo_pwm
++                nav_state = nav.snapshot()
++                status = operator_status()
++                return dict(servo5=sample['servo5_raw_us'] if sample else None,
++                            servo6=sample['servo6_raw_us'] if sample else None,
++                            pwm_age=reader.clock()-sample['at'] if sample else None,
++                            pwm_current=bool(sample and sample['owner_epoch'] == reader.heartbeat_safety_serial
++                                             and reader.state == 'READING' and reader.source == (1, 1)),
++                            heartbeat_age=status['heartbeat_age'], tx_sent=nav_state['sent'])
++
 +            log_queue = LogQueue(reader.clock, args.stage3_log_journal_directory,
 +                                 args.stage3_log_approval_file, pi_boot, PORT,
-+                                 args.web_disarm_client_uid, root_attested, log_peer, log_safety)
++                                 args.web_disarm_client_uid, root_attested, log_peer, log_safety, log_telemetry)
 +
 +            def log_send(fd, message):
 +                if os.get_blocking(fd):
@@ -636,7 +725,7 @@
          def owner_tick(fd):
              guarded.tick(fd)
              if brake is not None:
-@@ -414,6 +470,11 @@
+@@ -414,6 +481,11 @@
                  operator.tick(lambda op, *fields: operator_send(fd, op, *fields),
                                connected=reader.state == 'READING' and reader.source == (1, 1),
                                priority_clear=not bench.disarm_pending())
@@ -648,7 +737,7 @@
              if nav is not None:
                  nav.tick(fd,command_pending=bench.disarm_pending())
              if mission is not None:
-@@ -430,7 +491,7 @@
+@@ -430,7 +502,7 @@
              mission_operations={op: partial(mission.command, op) for op in MISSION_OPERATIONS}
              if mission is not None else None,
              arm_operations={'ARM': arm.request, 'ARM_READY': arm.ready, 'ARM_STATUS': arm.status} if arm else None,

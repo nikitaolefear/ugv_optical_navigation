@@ -1,6 +1,6 @@
 # B2-LOG operator procedure
 
-**Discovery starts without a parameter index.** The profile enables no mutation until the Owner verifies the index and a separately approved boot/session marker grants the specific transaction action. Rover named reads and PARAM_SET echoes can share wire index 65535. Discovery uses one bounded PARAM_REQUEST_LIST and then an indexed read with exact source, name, type, index and count checks. [Rover parameter handlers](https://raw.githubusercontent.com/ArduPilot/ardupilot/Rover-4.7.2/libraries/GCS_MAVLink/GCS_Param.cpp#L244-L388)
+**Discovery starts without a parameter index.** The profile enables no mutation until the Owner verifies the index and a separately approved boot/session marker grants the specific transaction action. Rover named reads and PARAM_SET echoes can share wire index 65535. Discovery uses bounded, paced indexed reads and then a separate indexed read with exact source, name, type, index and count checks. [Rover parameter handlers](https://raw.githubusercontent.com/ArduPilot/ardupilot/Rover-4.7.2/libraries/GCS_MAVLink/GCS_Param.cpp#L244-L388)
 
 ## Deployment and rollback
 
@@ -54,7 +54,9 @@ SH
 revoke_log() { sudo rm -f -- /run/ugv-stage3-operator/log-profile/authorization; }
 ```
 
-After confirming isolation and the operator's approval for the read-only inventory, call `mark_log discover`, then `log_op discover`. A single inventory request accepts only 1/1, validates all slots, rejects conflicting duplicates, and ignores sentinel 65535. It stops on full coverage, deadline or failure. Limits are 60 seconds, 4096 slots, 12288 frames and zero retries. No unrelated parameter values are retained. Metadata hashes live only in memory during discovery. After full coverage and a quiet period the Owner issues a separate indexed read. Proof requires equal count, type, name, index and value. Incomplete inventory or failed proof leaves the index unavailable. Run `revoke_log` after completion or to cancel. Inspect `log_op status` for the discovered target and transport fault.
+After confirming isolation and approval for the read-only inventory, call `mark_log discover`, then `log_op discover`. The first accepted indexed response gives param_count. Probe every index from zero to count minus one to rule out conflicting names or aliases. The Owner admits one outstanding request, sends at most 10 inventory queries per second, and allows up to 480 seconds, 4096 positions, 12288 incoming parameter frames and zero retries. Each request has a timeout of at most two seconds. Unrelated parameter values are discarded. Inventory metadata remains only in memory. A separate indexed read after the quiet interval checks name, index, count, type and value against the inventory. A missing or inconsistent position results in INCONCLUSIVE. No writes are allowed by the discovery marker.
+
+Every discovery tick requires current PWM evidence for both channels at 999 microseconds and the existing age limit below three seconds. The Owner keeps a one-record failure capture with the exact guard verdict, reported PWM and age, heartbeat age, interlocks, TX state, last PARAM_VALUE receive time and counters. Read it via status. It is in memory. Save it only in a private local operator log before rollback, if needed. Run `revoke_log` after completion or to cancel, then `log_op status`.
 
 Boot/session evidence is in memory and is invalid after a new Owner session, a detected clock rollback or reconnect. Hardware is the digest of the configured USB by-id name verified against the existing Owner descriptor. The local FC epoch is a continuity marker, not a global Pixhawk UUID. Fresh indexed readback also requires the same parameter count. No implicit retry or restoring write occurs on startup.
 
@@ -65,3 +67,10 @@ For routine restore, run `mark_log restore "$TX_ID"` and `log_op restore --trans
 ## Time and DataFlash
 
 Use the transaction and DataFlash proof plan in PROCEDURE.md. On the isolated stand, cap the enabled window at 60 seconds and read at most the existing Owner prefix limit. Schedule the independent restore before enable and stop acquisition early enough to verify restoration. If a guard fails, leave the journal pending for controlled recovery. Never turn an ambiguous readback into successful rollback. Two after-catalogs and the earlier catalog must finish with LOG_REQUEST_END. Capture a fresh Observer and bracketing TIMESYNC. Compare both XKFS cores in the anchored boot-relative interval. Ensure the selected prefix includes the interval or report INCONCLUSIVE. No SRC command is used.
+
+
+## Recovery from the current discovery transport fault
+
+Preserve the private result and confirm no marker, no active task, queue zero, DataFlash IDLE and no unfinished transaction. If an unfinished transaction exists, use its separately approved recovery and preserve the journal. Check the updated SHA256SUMS.
+
+After separate service-restart and deployment authorization, return to known B2 with `sudo bash "$PACKAGE/deploy.sh" rollback --approved`. Verify B2, one Owner, HOLD, DISARMED, inhibit and STOP latch, fresh PWM 999/999 and TX=0. Then deploy the updated read-only profile with `sudo bash "$PACKAGE/deploy.sh" activate --approved`. Verify the new Owner generation, empty queue and absent authorization. A new discovery marker must be approved and tied to the new session. Abort on missing or out-of-range evidence and retain the capture. Neither rollback nor activation writes parameters.

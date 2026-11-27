@@ -29,7 +29,7 @@ def main():
         print(json.dumps(call('S3_LOG_STATUS', {})))
         return
     call('S3_LOG_'+args.action.upper(), {'transaction':args.transaction} if args.transaction else {})
-    deadline=time.monotonic()+(68 if args.action == "discover" else 12)
+    deadline=time.monotonic()+(490 if args.action == "discover" else 12)
     while time.monotonic()<deadline:
         result=call('S3_LOG_RESULT',{})
         if not result['active']:

@@ -1,5 +1,4 @@
 import time
-import unittest
 
 from pymavlink.dialects.v20 import ardupilotmega as mav
 from disarm_control.log_discovery import Inventory
@@ -16,19 +15,30 @@ class DiscoveryTests(integration.OwnerTests):
         self.index_reply = self.make(1, b'LOG_DISARMED')
         self.list_replies = [self.make(0, b'OTHER', 6), self.make(1, b'LOG_DISARMED')]
         self.responses = []
+        self.reply_reads = 0
 
     def make(self, index, name, value=0, kind=mav.MAV_PARAM_TYPE_INT8, source=1, count=2):
         return self.packet(mav.MAVLink_param_value_message(name,value,kind,count,index),source)
 
+    def new_owner(self):
+        q = super().new_owner()
+        self.pwm = dict(pwm_current=True, pwm_age=.2, servo5=999, servo6=999,
+                        heartbeat_age=.1, tx_sent=0)
+        q.telemetry = lambda: self.pwm.copy()
+        return q
+
     def respond(self, message):
         self.sent.append(message)
-        if message.get_type() == 'PARAM_REQUEST_LIST':
-            self.responses.extend(self.list_replies)
-        elif message.get_type() == 'PARAM_REQUEST_READ':
-            self.assertEqual(message.param_index,1)
+        self.assertEqual(message.get_type(), 'PARAM_REQUEST_READ')
+        index = message.param_index
+        if index == 1 and self.reply_reads:
             self.responses.append(self.index_reply)
         else:
-            self.fail('unexpected mutation')
+            # Include unsolicited/duplicate/foreign frames to exercise filtering.
+            self.responses.extend(m for m in self.list_replies
+                                  if m.param_index in (index, 65535))
+        if index == 1:
+            self.reply_reads += 1
 
     def pump_discovery(self, abort=None):
         for _ in range(250):
@@ -57,10 +67,10 @@ class DiscoveryTests(integration.OwnerTests):
         proof=self.dispatch('S3_LOG_STATUS')['discovery']
         self.assertEqual({k:proof[k] for k in ('index','count','value','param_type')},
                          dict(index=1,count=2,value=0,param_type=mav.MAV_PARAM_TYPE_INT8))
-        self.assertEqual([m.get_type() for m in self.sent],['PARAM_REQUEST_LIST','PARAM_REQUEST_READ'])
+        self.assertEqual([m.get_type() for m in self.sent],['PARAM_REQUEST_READ']*3)
         self.dispatch('S3_LOG_BEGIN')
         self.pump_discovery()
-        self.assertEqual(len(self.sent),2)
+        self.assertEqual(len(self.sent),3)
 
     def test_duplicate_sentinel_and_foreign_frames(self):
         self.list_replies.insert(0,self.make(65535,b'LOG_DISARMED'))
@@ -73,9 +83,9 @@ class DiscoveryTests(integration.OwnerTests):
     def test_incomplete_list_times_out_without_indexed_read(self):
         self.list_replies.pop(0)
         self.start()
-        self.pump_discovery(lambda: setattr(self,'now',self.now+61))
+        self.pump_discovery(lambda: setattr(self,'now',self.now+481))
         self.assertIsNone(self.dispatch('S3_LOG_STATUS')['discovery'])
-        self.assertEqual([m.get_type() for m in self.sent],['PARAM_REQUEST_LIST'])
+        self.assertEqual([m.get_type() for m in self.sent],['PARAM_REQUEST_READ'])
 
     def test_mismatched_confirmation_name_type_value_or_count(self):
         for reply in (self.make(1,b'OTHER'),self.make(1,b'LOG_DISARMED',kind=6),
@@ -84,6 +94,7 @@ class DiscoveryTests(integration.OwnerTests):
                 self.q=self.new_owner()
                 self.q.discovery=None
                 self.index_reply=reply
+                self.reply_reads=0
                 self.start()
                 self.pump_discovery()
                 self.assertIsNone(self.dispatch('S3_LOG_STATUS')['discovery'])
@@ -92,14 +103,14 @@ class DiscoveryTests(integration.OwnerTests):
         self.start()
         self.pump_discovery(lambda: self.flags.update(fresh_heartbeat=False))
         self.assertIsNone(self.dispatch('S3_LOG_STATUS')['discovery'])
-        self.assertEqual([m.get_type() for m in self.sent],['PARAM_REQUEST_LIST'])
+        self.assertEqual([m.get_type() for m in self.sent],['PARAM_REQUEST_READ'])
         self.q=self.new_owner()
         self.q.discovery=None
         self.flags.update(fresh_heartbeat=True)
         self.start()
         self.marker=None
         self.pump_discovery()
-        self.assertEqual([m.get_type() for m in self.sent],['PARAM_REQUEST_LIST'])
+        self.assertEqual([m.get_type() for m in self.sent],['PARAM_REQUEST_READ'])
 
     def test_conflicting_duplicate_rejected(self):
         inventory=Inventory()
