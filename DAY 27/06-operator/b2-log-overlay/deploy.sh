@@ -1,12 +1,8 @@
 #!/bin/bash
 # Future authorized operation. Never run for offline evaluation.
 set -Eeuo pipefail
-[[ $EUID == 0 && $# -ge 2 && $2 == --approved ]]
-if [[ $1 == activate ]]; then
-    [[ $# == 3 && $3 =~ ^[0-9]{1,5}$ && $((10#$3)) -le 32767 ]]
-else
-    [[ $# == 2 && $1 == rollback ]]
-fi
+[[ $EUID == 0 && $# == 2 && $2 == --approved ]]
+[[ $1 == activate || $1 == rollback ]]
 bundle=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 (cd "$bundle" && sha256sum --quiet -c SHA256SUMS)
 source "$bundle/transaction.sh"
@@ -127,12 +123,12 @@ payload=$(mktemp -d /opt/stage3-b2-log.XXXXXX)
 chmod 0755 "$payload"
 # The baseline stays in place. Only overlay files are materialized.
 cp -as "$base/." "$payload/"
-for file in disarm_control/{ipc,log_queue,log_disarmed,owner_port}.py owner/stop_latch_test/hold_runner.py; do
+for file in disarm_control/{ipc,log_queue,log_disarmed,owner_port,log_discovery}.py owner/stop_latch_test/hold_runner.py; do
     install -m 0644 -- "$bundle/overlay/$file" "$payload/$file"
 done
 install -m 0644 -- "$bundle/log_client.py" "$payload/log_client.py"
 candidate=$extra/candidate.conf
-python3 "$bundle/profile.py" "$reference" "$base" "$payload" "$marker" "$journal" "$3" > "$candidate"
+python3 "$bundle/profile.py" "$reference" "$base" "$payload" "$marker" "$journal" > "$candidate"
 printf '%s\n' "$payload" > "$installed"
 env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$payload/owner:$payload/optical:$payload" \
     "$py" - "$candidate" "$owner_uid" "$client_uid" "$client_gid" "$bundle" <<'PY'

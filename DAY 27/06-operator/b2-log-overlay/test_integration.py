@@ -7,7 +7,7 @@ import unittest
 import uuid
 
 from pymavlink.dialects.v20 import ardupilotmega as mav
-from disarm_control.log_disarmed import GUARDS
+from disarm_control.log_disarmed import GUARDS, Refused
 from disarm_control.log_queue import LogQueue
 from disarm_control.ipc import OwnerClient, OwnerServer, SocketPolicy
 from stop_latch_test.hold_runner import parse_args
@@ -34,10 +34,11 @@ class OwnerTests(unittest.TestCase):
 
     def new_owner(self):
         q=LogQueue(lambda:self.now,self.root,self.root/'marker','1'*32,self.device,os.getuid(),
-                   lambda _,expected:self.marker==expected,lambda peer:peer==self.peer,lambda:self.flags.copy(),7)
+                   lambda _,expected:self.marker==expected,lambda peer:peer==self.peer,lambda:self.flags.copy())
         m=mav.MAVLink_attitude_message(1000,0,0,0,0,0,0)
         q.observe(self.packet(m))
         q.tick(self.fd,self.sent.append,connected=True,epoch=self.epoch,priority_clear=True)
+        q.discovery = dict(identity=q.identity(), index=7, count=10)
         return q
 
     @staticmethod
@@ -145,8 +146,8 @@ class OwnerTests(unittest.TestCase):
         self.q.observe(self.packet(mav.MAVLink_attitude_message(5,0,0,0,0,0,0)))
         self.q.tick(self.fd,self.sent.append,connected=True,epoch=self.epoch,priority_clear=True)
         self.assertNotEqual(previous,self.q.identity())
-        self.dispatch('S3_LOG_BEGIN')
-        self.pump()
+        with self.assertRaises(Refused):
+            self.dispatch('S3_LOG_BEGIN')
         self.assertEqual(self.sent,[])
 
     def test_queue_reports_other_dataflash(self):
@@ -156,7 +157,7 @@ class OwnerTests(unittest.TestCase):
     def test_real_b2_log_startup_parser(self):
         reference=Path(os.environ['B2_REFERENCE']).read_text()
         base=next(l.split('=',1)[1].removesuffix('/owner') for l in reference.splitlines() if l.startswith('WorkingDirectory='))
-        config=render(reference,base,'/overlay','/marker','/journal','7')
+        config=render(reference,base,'/overlay','/marker','/journal')
         command=shlex.split(config.splitlines()[-1].removeprefix('ExecStart='))
         argv=resolve_identities(command,dict(zip(IDENTITIES.values(),(str(os.getuid()+1),'123'))))[4:]
         a=parse_args(argv)

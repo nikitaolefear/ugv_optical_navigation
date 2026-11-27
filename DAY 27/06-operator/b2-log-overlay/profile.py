@@ -22,9 +22,7 @@ def resolve_identities(argv, identities):
     return resolved
 
 
-def render(text, base, overlay, marker, journal, index):
-    if not re.fullmatch(r"[0-9]{1,5}", index) or int(index) > 32767:
-        raise ValueError("invalid LOG_DISARMED index")
+def render(text, base, overlay, marker, journal):
     lines = text.splitlines()
     prefix = 'ExecStart='
     starts = [line[len(prefix):] for line in lines if line.startswith(prefix) and line != prefix]
@@ -44,9 +42,9 @@ def render(text, base, overlay, marker, journal, index):
         raise ValueError('Unsafe systemd path')
     return (f'[Service]\nWorkingDirectory={overlay}/owner\n'
             f'Environment=PYTHONPATH={overlay}/owner:{overlay}/optical:{overlay}\n'
-            f'{prefix}\n{prefix}{starts[0]} --stage3-log-approval-file {marker} --stage3-log-journal-directory {journal} --stage3-log-param-index {index}\n')
+            f'{prefix}\n{prefix}{starts[0]} --stage3-log-approval-file {marker} --stage3-log-journal-directory {journal}\n')
 
 
 if __name__ == '__main__':
-    reference, base, overlay, marker, journal, index = sys.argv[1:]
-    print(render(Path(reference).read_text(), base, overlay, marker, journal, index), end='')
+    reference, base, overlay, marker, journal = sys.argv[1:]
+    print(render(Path(reference).read_text(), base, overlay, marker, journal), end='')

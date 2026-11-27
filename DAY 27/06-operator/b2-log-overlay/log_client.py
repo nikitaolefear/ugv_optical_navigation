@@ -9,7 +9,7 @@ from disarm_control.ipc import OwnerClient, SocketPolicy
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('status','begin','restore','recover'))
+    parser.add_argument('action', choices=('status','discover','begin','restore','recover'))
     parser.add_argument('--socket', required=True)
     parser.add_argument('--owner-uid', type=int, required=True)
     parser.add_argument('--socket-gid', type=int, required=True)
@@ -29,7 +29,7 @@ def main():
         print(json.dumps(call('S3_LOG_STATUS', {})))
         return
     call('S3_LOG_'+args.action.upper(), {'transaction':args.transaction} if args.transaction else {})
-    deadline=time.monotonic()+12
+    deadline=time.monotonic()+(68 if args.action == "discover" else 12)
     while time.monotonic()<deadline:
         result=call('S3_LOG_RESULT',{})
         if not result['active']:
