@@ -89,6 +89,13 @@ fc7a991ee716216a42f9bfc418f63f7e13c0e582487464ff1fb5dc2d41370872  ./06-operator/
 c508cd8a26c7ca30493acf09d759ae1aeea8dab9027b8c0c47538c2098ae0b00  ./06-operator/b2-log-overlay/test_pwm_capture.py
 22703f742986a404f8302d858bf1b65a897c862df190e58800ba1242ee7309e0  ./06-operator/b2-log-overlay/test_transaction.sh
 b6d02f0ff03f81e61dedce19880417a7823090ffadfc0ad30372fb908d458e64  ./06-operator/b2-log-overlay/transaction.sh
+01ba863495080796d97f8f7dc21026156156d75f697e25c2fa41287cf6a8ea63  ./06-operator/b3-sw/OPERATOR.md
+cc16a7380ee6277cc17da7c230ad341d24cc013c7075b9a82f0b834bd77c6431  ./06-operator/b3-sw/SHA256SUMS
+c227487a364d754b040675470856b5db6ae0e01874c484535c18d91740d18ff2  ./06-operator/b3-sw/TEST-REPORT.md
+87032768b8335eafa66f7305c076051774e038f366022b2b5003432f126c0495  ./06-operator/b3-sw/decode.py
+0099810f7b937d09628116a73b33ed754ea0338937a2d33c6b11cc265095df58  ./06-operator/b3-sw/owner_evidence.py
+c75a58abaf0a8d512c684f7bfbc10bc9662be12d4067d605c7951a50e462b7a0  ./06-operator/b3-sw/test_b3_sw.py
+70ebcd3a18183b9d3e8faa693f608869e34791aee9af125e8c70dec28cd781e4  ./06-operator/b3-sw/usb_capture.py
 f366f56abb260618b12fdadd2d065af811dc939dc5422306d4ce13e06ebe22f5  ./06-operator/integration.txt
 ef866423fed095d7581a5e34fd3128a1cb9bfed1b7f74ff904b3fe405fb95116  ./06-operator/log-disarmed-transaction/PROCEDURE.md
 c1fd14675e0bad15161118f28e478fdd9c8f6f8f3522a69f3bf3fda8f20a9a31  ./06-operator/log-disarmed-transaction/SHA256SUMS
