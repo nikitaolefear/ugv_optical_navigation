@@ -132,7 +132,7 @@ class LeaseTests(unittest.TestCase):
         import os
         from pathlib import Path
         import shlex
-        from profile import IDENTITIES,render,resolve_identities
+        from b3_profile import IDENTITIES,render,resolve_identities
         from stop_latch_test.hold_runner import parse_args
 
         ref=Path(os.environ['B2_REFERENCE']).read_text()

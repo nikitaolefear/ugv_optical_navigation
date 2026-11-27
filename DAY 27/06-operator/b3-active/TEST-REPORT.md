@@ -1,6 +1,5 @@
-# B3-SW active candidate tests
+# Active B3-SW re-audit tests
 
-- 9 candidate Python tests pass, including full rendered startup parser, closed default, UID/session-derived guard inputs, expiry, peer termination, explicit revoke, serialized concurrent send, stale pose, guard after pack, alignment, I/O failure and partial writes.
-- B2-LOG regression 34/34, passive decoder 11/11, archived lease/Owner 25/25 and shell rollback mocks 3/3 passed. These established baseline behavior and do not prove all combined service runtime paths.
-- Mock guard tests model heartbeat, PWM and transport failure as loss of the precise predicate passed into the lease. Real callback execution, IPC/client process timing, USB host stop bound and module timing are pending independent audit and authorized bench qualification.
-- No live commands, usbmon loads, service restarts or Pixhawk writes.
+20/20 candidate tests passed. Includes real Unix IPC and credentials, RLock, non-vehicle PTY os.write, real MAVLink decoding, unreaped zombie pidfd, individually false safety predicates, injected callback exceptions and failures, trace, rollback predicate, peer/process binding, premature renew, manual revoke, expiry and termination, bad scenario, missing or impossible trigger, 700 ms hidden delay, stale pose, session change and partial write. Original false PASS and callback escape reproduced on archived code offline.
+
+Previous B2-LOG tests 34/34, decoder 11/11, archived Owner/lease 25/25 and rollback mocks 3/3. The PTY harness exercises extracted production predicates and IPC, not a full combined HMI service boot. No live deployment, traffic, capture, parameter queries or changes.

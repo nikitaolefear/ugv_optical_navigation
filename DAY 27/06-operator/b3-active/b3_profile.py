@@ -22,6 +22,13 @@ def resolve_identities(argv, identities):
     return resolved
 
 
+def rollback_allowed(status):
+    return (status.get("active") is None and status.get("queued") == 0
+            and status.get("dataflash") == "IDLE" and status.get("b3_active") is False
+            and "unfinished" in status and status["unfinished"] is None
+            and status.get("recovery_required") is False)
+
+
 def render(text, base, overlay, marker, journal, b3_marker):
     lines = text.splitlines()
     prefix = 'ExecStart='

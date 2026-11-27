@@ -1,9 +1,11 @@
 --- /dev/null
 +++ b/disarm_control/b3_lease.py
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,233 @@
 +"""Single-Owner B3 test lease. No serial opener and no client-supplied frames."""
 +import hashlib
 +import re
++import os
++import select
 +import threading
 +import time
 +
@@ -15,12 +17,30 @@
 +RATE = .1
 +
 +
++def watch_pid(peer):
++    fd = os.pidfd_open(peer[1])
++    try:
++        poll = select.poll()
++        poll.register(fd, select.POLLIN)
++        return fd, poll
++    except Exception:
++        os.close(fd)
++        raise
++
++
 +class BenchLease:
 +    def __init__(self, clock, identity, alive, approved, guard, pose, encode, write,
-+                 ns=time.monotonic_ns, qualified=lambda: True):
++                 ns=time.monotonic_ns, qualified=lambda: True, watch=None):
 +        self.clock, self.identity, self.alive, self.approved = clock, identity, alive, approved
 +        self.guard, self.pose, self.encode, self.write, self.ns = guard, pose, encode, write, ns
 +        self.qualified = qualified
++        self.watch = watch
++        self.pidwatch = None
++        self.failure = None
++        self.safety_lost = False
++        self.trace_drops = 0
++        self.last_syscall_ns = None
++        self.stage = "idle"
 +        self.lock = threading.RLock()
 +        self.lease = None
 +        self.request = None
@@ -32,40 +52,82 @@
 +        self.last_pose = None
 +        self.last_write = float('-inf')
 +
-+    def close(self, reason, trigger=None):
-+        if self.lease is not None:
-+            instant = self.ns()
-+            self.stop = dict(reason=reason, trigger_ns=instant if trigger is None else trigger,
-+                             gate_ns=instant, barrier_ns=instant,
-+                             lease_start_ns=self.lease['start_ns'],
-+                             last_renew_ns=self.lease['renew_ns'], scenario=self.lease['scenario'])
-+            self.lease = None
-+        self.request = None
++    def drop_watch(self):
++        watch, self.pidwatch = self.pidwatch, None
++        if watch is not None:
++            os.close(watch[0])
++
++    def invoke(self, name, fn, *args):
++        self.stage = name
++        try:
++            return fn(*args)
++        except Refused as error:
++            raise RuntimeError('internal callback refused') from error
++
++    def emergency(self, error):
++        # Disable before best-effort diagnostic or pidfd cleanup.
++        self.lease = self.request = None
++        self.fault = self.safety_lost = True
++        self.stop = None
++        self.failure = dict(reason='internal_fault', callback=self.stage,
++                            exception=type(error).__name__)
++        try:
++            self.drop_watch()
++        except Exception as cleanup:
++            self.failure['cleanup_exception'] = type(cleanup).__name__
++
++    def close(self, reason, trigger=None, ipc=None):
++        item = self.lease or self.request
++        self.lease = self.request = None
++        if item is not None:
++            self.safety_lost |= reason not in ('revoke','client_exit','expiry','hard_limit')
++            instant = self.invoke('stop_clock', self.ns)
++            self.stop = dict(reason=reason, trigger_ns=trigger, gate_ns=instant,
++                             barrier_ns=self.invoke('barrier_clock', self.ns),
++                             last_syscall_ns=self.last_syscall_ns,
++                             lease_start_ns=item.get('start_ns'),
++                             last_renew_ns=item.get('renew_ns'), scenario=item['scenario'],
++                             lease=item['nonce'], peer=list(item['peer']),
++                             ipc=ipc, safety_lost=self.safety_lost, trace_drops=self.trace_drops)
++        self.invoke('watch_cleanup', self.drop_watch)
 +
 +    def _expire(self):
 +        if not self.lease:
 +            return
 +        l = self.lease
-+        now = self.clock()
-+        if not self.alive(l['peer']):
++        now = self.invoke("clock", self.clock)
++        exited = self.invoke("pidfd_poll", self.pidwatch[1].poll, 0) if self.pidwatch else False
++        if (self.invoke('identity',self.identity) != l['identity']
++                or not self.invoke('approval',self.approved,l)
++                or not self.invoke('guard',self.guard)):
++            self.close('guard_lost')
++        elif exited or not self.invoke("peer_alive", self.alive, l["peer"]):
 +            self.close('client_exit')
 +        elif now >= l['deadline']:
 +            self.close('expiry', l['renew_ns'])
 +        elif now >= l['hard']:
 +            self.close('hard_limit')
-+        elif self.identity() != l['identity'] or not self.approved(l) or not self.guard():
-+            self.close('guard_lost')
 +
 +    def active(self):
 +        with self.lock:
 +            return self.lease is not None or self.request is not None
 +
-+    def dispatch(self, peer, op, body):
-+        received = self.ns()
++    def dispatch(self, peer, op, body, ipc=None):
++        with self.lock:
++            try:
++                return self._dispatch(peer, op, body, ipc)
++            except Refused:
++                raise
++            except Exception as error:
++                self.emergency(error)
++                raise Refused('B3_INTERNAL_FAULT') from error
++
++    def _dispatch(self, peer, op, body, ipc):
 +        with self.lock:
 +            if op == 'S3_B3_STATUS' and not body:
 +                return dict(active=self.active(), fault=self.fault, stop=self.stop,
-+                            count=len(self.rows), start_ns=self.lease and self.lease['start_ns'])
++                            count=len(self.rows), failure=self.failure, safety_lost=self.safety_lost,
++                            trace_drops=self.trace_drops, start_ns=self.lease and self.lease['start_ns'])
 +            if op == 'S3_B3_ROW' and set(body)=={'index'}:
 +                index=body['index']
 +                if self.active() or type(index) is not int or not 0 <= index < len(self.rows):
@@ -75,32 +137,49 @@
 +                if (set(body) != {'scenario','nonce'} or self.active() or self.fault
 +                        or not isinstance(body['scenario'],str) or body['scenario'] not in SCENARIOS
 +                        or not isinstance(body['nonce'],str) or not re.fullmatch('[0-9a-f]{32}',body['nonce'])
-+                        or body['nonce'] in self.used or len(self.used)>=16 or not self.alive(peer)):
++                        or body['nonce'] in self.used or len(self.used)>=16 or not self.invoke('peer_alive',self.alive,peer)):
 +                    raise Refused('B3_OPEN_REFUSED')
-+                i=self.identity()
++                i=self.invoke('identity',self.identity)
 +                if not i:
 +                    raise Refused('B3_IDENTITY_REQUIRED')
 +                request=dict(peer=peer,identity=i,scenario=body['scenario'],nonce=body['nonce'])
-+                if not self.approved(request) or not self.guard():
++                if not self.invoke('approval',self.approved,request) or not self.invoke('guard',self.guard):
 +                    raise Refused('B3_OPEN_REFUSED')
++                if self.watch is not None:
++                    self.pidwatch = self.invoke('pidfd_open',self.watch,peer)
++                    if not self.invoke('peer_alive',self.alive,peer):
++                        self.drop_watch()
++                        raise Refused('B3_PEER_EXITED')
 +                self.request=request
 +                self.used.add(body['nonce'])
 +                self.rows.clear()
 +                self.stop=None
++                self.last_syscall_ns=None
++                self.safety_lost=False
++                self.trace_drops=0
 +                return {'queued':True}
 +            if body:
 +                raise Refused('B3_UNEXPECTED_PAYLOAD')
 +            if op == 'S3_B3_REVOKE' and any(x and x['peer']==peer for x in (self.lease,self.request)):
-+                self.close('revoke',received)
++                if self.lease and not self.invoke('guard',self.guard):
++                    self.safety_lost = True
++                self.close('revoke',ipc=ipc)
 +                return {'closed':True}
 +            if op == 'S3_B3_RENEW' and self.lease and self.lease['peer']==peer:
 +                self._expire()
 +                if self.lease:
-+                    self.lease.update(deadline=self.clock()+IDLE,renew_ns=self.ns())
++                    self.lease.update(deadline=self.invoke('clock',self.clock)+IDLE,renew_ns=self.invoke('renew_clock',self.ns))
 +                    return {'renewed':True}
 +            raise Refused('B3_OPERATION_REFUSED')
 +
 +    def tick(self, fd):
++        with self.lock:
++            try:
++                self.send_tick(fd)
++            except Exception as error:
++                self.emergency(error)
++
++    def send_tick(self, fd):
 +        # This lock spans final guard and the single nonblocking syscall:
 +        # revocation linearizes after any syscall already holding this lock.
 +        with self.lock:
@@ -112,7 +191,7 @@
 +            self._expire()
 +            if not self.lease or self.clock()-self.last_write < RATE:
 +                return
-+            pose=self.pose()
++            pose=self.invoke('pose',self.pose)
 +            if pose is None or not 0 <= self.clock()-pose['acquired_at'] <= .2:
 +                self.close('pose_stale')
 +                return
@@ -120,15 +199,11 @@
 +                return
 +            if len(self.rows)>=CAP:
 +                self.fault=True
++                self.trace_drops+=1
 +                self.close('trace_capacity')
 +                return
-+            try:
-+                raw, meta=self.encode(pose)
-+            except (ValueError, OSError, TypeError, KeyError, OverflowError):
-+                self.fault=True
-+                self.close('encode_fault')
-+                return
-+            if not self.qualified():
++            raw, meta=self.invoke('encoder', self.encode,pose)
++            if not self.invoke('alignment',self.qualified):
 +                self.close('alignment_unverified')
 +                return
 +            self._expire()
@@ -143,17 +218,61 @@
 +            self.last_pose=pose['sequence']
 +            row['enter_ns']=self.ns()
 +            try:
-+                row['written']=self.write(fd,raw)
++                row['written']=self.invoke('writer',self.write,fd,raw)
 +            except OSError as e:
 +                row.update(written=-1,errno=e.errno)
 +            row['exit_ns']=self.ns()
-+            self.rows.append(row)
++            self.last_syscall_ns=row['exit_ns']
++            try:
++                self.invoke('trace',self.rows.append,row)
++            except Exception:
++                self.trace_drops+=1
++                raise
 +            self.last_write=self.clock()
 +            if row['written']==len(raw):
 +                self.sent_total += 1
 +            else:
 +                self.fault=True
 +                self.close('serial_write_fault')
+--- /dev/null
++++ b/disarm_control/b3_probe.py
+@@ -0,0 +1,36 @@
++"""Fixed transport probe for pinned Rover 4.7.2, no i/o."""
++from pymavlink.dialects.v20 import ardupilotmega as mav
++from .log_disarmed import GUARDS
++
++
++def send_guard(state, pwm, *, heartbeat_age, src, transport_fault, conflicting,
++               disarm_pending, observe_only):
++    return (all(state.get(key) is True for key in GUARDS)
++            and heartbeat_age is not None and 0 <= heartbeat_age <= 1
++            and all(pwm[str(i)]['state']=='FRESH' and pwm[str(i)]['pwm_us']==999
++                    for i in (5,6))
++            and src == 1 and not transport_fault and not conflicting
++            and not disarm_pending and observe_only)
++
++
++def probe_packet(pose, encoder):
++    # Rover 4.7.2 rejects LOCAL_NED here before invoking VisualOdom.
++    # Keep the ODOMETRY wire schema, but use a known synthetic NED sample.
++    cov = [float('nan')] + [0.0]*20
++    usec = int(pose['acquired_at']*1e6)
++    seq = encoder.seq
++    msg = mav.MAVLink_odometry_message(
++        usec, mav.MAV_FRAME_LOCAL_NED, mav.MAV_FRAME_BODY_FRD,
++        .125,-.25,.375,[1.,0.,0.,0.], .125,-.25,.375,0.,0.,0.,
++        cov,cov,0,mav.MAV_ESTIMATOR_TYPE_VISION,-1)
++    raw = msg.pack(encoder)
++    encoder.seq = (seq+1)%256
++    return raw, dict(id=331,seq=seq,sys=encoder.srcSystem,
++                     comp=encoder.srcComponent,usec=usec)
++
++
++def approval_record(lease):
++    i = lease['identity']
++    binding = ' '.join(i[k] for k in ('hardware','pi_boot','fc_boot','owner_session'))
++    _, pid, generation = lease['peer']
++    return f"B3 {binding} {pid} {generation} {lease['scenario']} {lease['nonce']}"
 --- a/disarm_control/ipc.py
 +++ b/disarm_control/ipc.py
 @@ -18,7 +18,9 @@
@@ -180,9 +299,38 @@
          self.stop_operations = stop_operations or {}
          self.arm_operations = arm_operations or {}
          if set(self.arm_operations) - {'ARM', 'ARM_READY', 'ARM_STATUS'}:
+@@ -165,6 +167,7 @@
+                     if peer_uid(self.request) != owner.allowed_uid:
+                         raise PermissionError('Peer refused')
+                     body = receive(self.request)
++                    received_ns = time.monotonic_ns()
+                     nonce = body.get('nonce')
+                     operation = body.get('op')
+                     mission = type(operation) is str and operation in owner.mission_operations
+@@ -179,7 +182,11 @@
+                         raise Rejected('INVALID_REQUEST')
+                     if stage3:
+                         pid, uid, _ = struct.unpack('3i', self.request.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+-                        value = owner.stage3_dispatch((uid, pid, peer_generation(pid)), operation, body['payload'])
++                        peer = (uid, pid, peer_generation(pid))
++                        if operation in B3_OPS:
++                            value = owner.stage3_dispatch(peer, operation, body['payload'], received_ns)
++                        else:
++                            value = owner.stage3_dispatch(peer, operation, body['payload'])
+                     elif mission:
+                         value = owner.mission_operations[operation](body['actor_id'], body['actor'],
+                                                                     body['request_id'], body['payload'])
 --- a/owner/stop_latch_test/hold_runner.py
 +++ b/owner/stop_latch_test/hold_runner.py
-@@ -59,7 +59,10 @@
+@@ -5,6 +5,7 @@
+ import atexit
+ import os
+ import threading
++import time
+ from functools import partial
+ from werkzeug.serving import make_server
+ from web_hmi.app import create_app as telemetry_app
+@@ -59,7 +60,10 @@
      parser.add_argument('--stage3-lua-attestation-file')
      parser.add_argument('--stage3-log-approval-file')
      parser.add_argument('--stage3-log-journal-directory')
@@ -193,7 +341,7 @@
      if (bool(args.stage3_log_approval_file) != bool(args.stage3_log_journal_directory)
              or (args.stage3_log_approval_file and (args.stage3_operator_mode != 'B2'
                  or args.diagnostic_params or args.diagnostic_brake_params
-@@ -181,6 +184,7 @@
+@@ -181,6 +185,7 @@
      arm = None
      operator = None
      log_queue = None
@@ -201,44 +349,67 @@
      if args.web_disarm_socket:
          from disarm_control.engine import DisarmEngine, disarm_sender
          from disarm_control.ipc import BRAKE_OPERATIONS, MISSION_OPERATIONS, OwnerServer, SocketPolicy
-@@ -450,12 +454,70 @@
+@@ -363,7 +368,7 @@
+                 return root_attested(args.stage3_lua_attestation_file,
+                                      'B2 LUA ' + pi_boot + ' 960f125c87258957cf07c2c13c5c83c4395f478fa0758fbffbd0263b98e49499')
+  
+-            def operator_status():
++            def operator_status(include_b3=True):
+                 hb = reader.messages.get('HEARTBEAT')
+                 age = reader.clock()-hb[0] if hb else None
+                 valid = (reader.state == 'READING' and reader.source == (1, 1)
+@@ -375,7 +380,7 @@
+                             inhibit=os.path.isfile(args.inhibit_file) and guarded.policy.blocked(),
+                             stop_latch=stop.stop_latch is True and not stop.reasons,
+                             hold_only=brake is not None and brake.hold_only and not production.storage_fault,
+-                            tx_enabled=nav.snapshot()['tx_enabled'])
++                            tx_enabled=nav.snapshot()['tx_enabled'] or bool(include_b3 and b3 and b3.active()))
+ 
+             def operator_guard():
+                 s = operator_status()
+@@ -418,13 +423,13 @@
+                 except (OSError, ValueError, IndexError):
+                     return False
+ 
+-            def log_safety():
+-                s = operator_status()
++            def log_safety(include_b3=True):
++                s = operator_status(include_b3)
+                 return dict(fresh_heartbeat=s['heartbeat_age'] is not None and 0 <= s['heartbeat_age'] < 1.5,
+                             hold=s['hold'], disarmed=s['disarmed'], inhibit=s['inhibit'],
+                             stop_latch=s['stop_latch'], isolated=approved_isolation(),
+                             tx_disabled=s['tx_enabled'] is False,
+-                            tx_zero=nav.snapshot()['sent'] == 0,
++                            tx_zero=nav.snapshot()['sent'] == 0 and not (include_b3 and b3 and b3.sent_total),
+                             exclusive_owner=s['hold_only'] and reader.state == 'READING')
+ 
+             def log_telemetry():
+@@ -450,12 +455,61 @@
                      raise OSError('partial LOG_DISARMED request')
                  encoder.seq = (encoder.seq + 1) % 256
  
+-            def dispatch(peer, op, payload):
 +            if args.stage3_b3_approval_file:
-+                from disarm_control.b3_lease import OPS as B3_OPS, BenchLease
-+                from disarm_control.log_disarmed import GUARDS
++                from disarm_control.b3_lease import OPS as B3_OPS, BenchLease, watch_pid
++                from disarm_control.b3_probe import approval_record, probe_packet, send_guard
 +
 +                def b3_allowed(lease):
-+                    binding = ' '.join(lease['identity'][k] for k in
-+                                       ('hardware','pi_boot','fc_boot','owner_session'))
-+                    return root_attested(args.stage3_b3_approval_file,
-+                                         f"B3 {binding} {lease['scenario']} {lease['nonce']}")
++                    return root_attested(args.stage3_b3_approval_file, approval_record(lease))
 +
 +                def b3_guard():
-+                    state = log_safety()
++                    status = operator_status(include_b3=False)
 +                    pwm = diagnostics.servo_outputs(reader.state == 'READING')
-+                    return (all(state.get(k) is True for k in GUARDS)
-+                            and reader.clock()-reader.messages["HEARTBEAT"][0] <= 1
-+                            and all(pwm[str(i)]['state']=='FRESH' and pwm[str(i)]['pwm_us']==999
-+                                    for i in (5,6))
-+                            and not log_queue.fault and not log_queue.job
-+                            and not operator.job and not operator.logs.busy
-+                            and not bench.disarm_pending() and nav.static_writer is None
-+                            and nav.bench_profile is None)
++                    return send_guard(
++                        log_safety(include_b3=False), pwm, heartbeat_age=status['heartbeat_age'],
++                        src=operator.source.read(), transport_fault=log_queue.fault,
++                        conflicting=bool(log_queue.job or operator.job or operator.logs.busy
++                                         or os.path.lexists(args.stage3_log_approval_file)),
++                        disarm_pending=bench.disarm_pending(),
++                        observe_only=(nav.static_writer is None and nav.bench_profile is None
++                                      and not nav.tx))
 +
 +                def b3_packet(p):
-+                    cov = [float('nan')] + [0.0]*20
-+                    usec = int(p['acquired_at']*1e6)
-+                    seq = nav.encoder.seq
-+                    msg = mav.MAVLink_odometry_message(
-+                        usec, mav.MAV_FRAME_LOCAL_FRD, mav.MAV_FRAME_BODY_FRD,
-+                        p['x'], p['y'], p['z'], p['q'], 0.,0.,0.,0.,0.,0.,
-+                        cov,cov,0,mav.MAV_ESTIMATOR_TYPE_VISION,100)
-+                    raw = msg.pack(nav.encoder)
-+                    nav.encoder.seq = (seq+1)%256
-+                    return raw, dict(id=331,seq=seq,sys=nav.encoder.srcSystem,
-+                                     comp=nav.encoder.srcComponent,usec=usec)
++                    return probe_packet(p, nav.encoder)
 +
 +                def b3_write(fd, raw):
 +                    if os.get_blocking(fd):
@@ -247,10 +418,12 @@
 +
 +                b3 = BenchLease(reader.clock, log_queue.identity, log_peer, b3_allowed,
 +                                b3_guard, nav.route_pose, b3_packet, b3_write,
-+                                qualified=nav.alignment_check)
++                                qualified=nav.alignment_check, watch=watch_pid)
 +
-             def dispatch(peer, op, payload):
++            def dispatch(peer, op, payload, received_ns=None):
++                waiting_ns = time.monotonic_ns()
                  with operator.lock:
++                    acquired_ns = time.monotonic_ns()
 +                    if b3 is not None:
 +                        if op in B3_OPS:
 +                            if op == 'S3_B3_OPEN':
@@ -258,7 +431,9 @@
 +                                if (log_state['unfinished'] is not None
 +                                        or os.path.lexists(args.stage3_log_approval_file)):
 +                                    raise Refused('B3_LOG_AUTH_OR_JOURNAL_ACTIVE')
-+                            return b3.dispatch(peer, op, payload)
++                            return b3.dispatch(peer, op, payload,
++                                               dict(received_ns=received_ns, lock_wait_ns=waiting_ns,
++                                                    lock_acquired_ns=acquired_ns))
 +                        if b3.active() and (op == 'S3_BENCH_REQUEST' or
 +                                            (op in LOG_OPS and op not in ('S3_LOG_STATUS','S3_LOG_RESULT'))):
 +                            raise Refused('B3_BUSY')
@@ -275,7 +450,7 @@
                      if op == 'S3_BENCH_REQUEST' and log_queue.job:
                          raise Refused('LOG_TRANSACTION_BUSY')
                      return operator.dispatch(peer, op, payload)
-@@ -486,6 +548,9 @@
+@@ -486,6 +540,9 @@
                                 connected=reader.state == 'READING' and reader.source == (1, 1),
                                 epoch=reader.heartbeat_safety_serial,
                                 priority_clear=not bench.disarm_pending())
@@ -285,7 +460,7 @@
              if nav is not None:
                  nav.tick(fd,command_pending=bench.disarm_pending())
              if mission is not None:
-@@ -502,7 +567,7 @@
+@@ -502,7 +559,7 @@
              mission_operations={op: partial(mission.command, op) for op in MISSION_OPERATIONS}
              if mission is not None else None,
              arm_operations={'ARM': arm.request, 'ARM_READY': arm.ready, 'ARM_STATUS': arm.status} if arm else None,
@@ -294,7 +469,7 @@
              disarm_request=priority_disarm,
              allowed_uid=args.web_disarm_client_uid,
              policy=SocketPolicy(os.getuid(), args.web_disarm_client_gid, 0o710, 0o660))
-@@ -523,7 +588,16 @@
+@@ -523,7 +580,16 @@
          page_app.add_url_rule('/api/production-stop', 'production_stop',
              lambda: jsonify(production.status(0, 'diagnostic', '')), methods=['GET'])
      if nav is not None:

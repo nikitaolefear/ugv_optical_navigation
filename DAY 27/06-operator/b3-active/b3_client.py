@@ -2,6 +2,8 @@
 import argparse
 import json
 import time
+import os
+from pathlib import Path
 import uuid
 
 from disarm_control.ipc import OwnerClient, SocketPolicy
@@ -15,6 +17,7 @@ def main():
     p.add_argument('--socket-gid', required=True,type=int)
     p.add_argument('--scenario', choices=('revoke','client_exit','expiry'))
     p.add_argument('--nonce')
+    p.add_argument('--await-approval', action='store_true')
     args=p.parse_args()
     if args.action=='run' and not (args.scenario and args.nonce):
         p.error('run requires scenario and separately authorized nonce')
@@ -36,18 +39,43 @@ def main():
         for index in range(status['count']):
             print(json.dumps(call('ROW',{'index':index})))
         return
+    generation = int(Path('/proc/self/stat').read_text().rsplit(')',1)[1].split()[19])
+    peer = [os.getuid(), os.getpid(), generation]
+    if args.await_approval:
+        print(json.dumps(dict(event='await_approval', lease=args.nonce, peer=peer)),flush=True)
+        marker=Path('/run/ugv-stage3-operator/log-profile/b3-authorization')
+        tail=f" {peer[1]} {peer[2]} {args.scenario} {args.nonce}\n"
+        timeout=time.monotonic()+30
+        while True:
+            try:
+                if marker.read_text().endswith(tail):
+                    break
+            except FileNotFoundError:
+                pass
+            if time.monotonic()>=timeout:
+                raise TimeoutError('approval not observed')
+            time.sleep(.05)
     call('OPEN',{'scenario':args.scenario,'nonce':args.nonce})
-    deadline=time.monotonic()+2
+    wait_deadline=time.monotonic()+.5
+    while call('STATUS',{})['start_ns'] is None:
+        if time.monotonic()>=wait_deadline:
+            raise TimeoutError('lease never active')
+        time.sleep(.02)
+    print(json.dumps(dict(event='active',peer=peer,lease=args.nonce)),flush=True)
+    deadline=time.monotonic()+1
     while time.monotonic()<deadline:
         time.sleep(.15)
         call('RENEW',{})
     if args.scenario=='revoke':
-        print(json.dumps({'client_revoke_ns':time.monotonic_ns()}),flush=True)
+        start=time.monotonic_ns()
         call('REVOKE',{})
+        print(json.dumps(dict(event='client_revoke',before_ns=start,
+                              after_ns=time.monotonic_ns(),lease=args.nonce,peer=peer)),flush=True)
     elif args.scenario=='expiry':
         time.sleep(1.1)  # Keep peer alive while deliberately not renewing.
     else:
-        raise SystemExit('Supervisor did not terminate test client in time')
+        # Remain alive if the supervisor misses its window. Expiry is then visible.
+        time.sleep(2)
 
 
 if __name__=='__main__':

@@ -31,7 +31,7 @@ args = shlex.split(next(s.removeprefix('ExecStart=') for s in open(sys.argv[1])
                         if s.startswith('ExecStart=') and s.strip() != 'ExecStart='))
 from pathlib import Path
 sys.path.insert(0, sys.argv[2])
-from profile import IDENTITIES, resolve_identities
+from b3_profile import IDENTITIES, resolve_identities
 
 values = {}
 for line in Path('/etc/ugv-disarm/identities.env').read_text().splitlines():
@@ -100,10 +100,18 @@ wait_profile() {
 if [[ $1 == rollback ]]; then
     [[ -f "$drop" && ! -L "$drop" && -f "$extra/candidate.conf" ]]
     cmp -s "$drop" "$extra/candidate.conf"
-    rm -f -- "$marker" "$b3_marker"
+    rm -f -- "$b3_marker"
     if systemctl is-active --quiet "$unit"; then
-        log_status | python3 -c 'import json,sys;s=json.load(sys.stdin);sys.exit(not(s["active"] is None and s["queued"]==0 and s["dataflash"]=="IDLE" and not s.get("b3_active",False)))'
+        log_status | python3 -c 'import json,sys
+sys.path.insert(0,sys.argv[1])
+from b3_profile import rollback_allowed
+sys.exit(not rollback_allowed(json.load(sys.stdin)))' "$bundle"
+    else
+        # No authoritative queue state while the combined Owner is down.
+        # An existing durable record needs explicit operator reconciliation.
+        [[ ! -e "$journal/log-disarmed.json" && ! -L "$journal/log-disarmed.json" ]]
     fi
+    test ! -e "$marker" && test ! -L "$marker"
     log_restore
     exit
 fi
@@ -118,19 +126,32 @@ if [[ ! -d "$journal" ]]; then
     install -d -o "$owner_uid" -m 0700 "$journal"
 fi
 [[ $(stat -c '%u:%a' "$journal") == "$owner_uid:700" ]]
+if [[ -e "$journal/log-disarmed.json" || -L "$journal/log-disarmed.json" ]]; then
+    test -f "$journal/log-disarmed.json" && test ! -L "$journal/log-disarmed.json"
+    python3 - "$journal/log-disarmed.json" <<'PYJ'
+import hashlib,json,sys
+with open(sys.argv[1],"rb") as stream:
+    raw=stream.read(4097)
+assert len(raw)<=4096
+data=json.loads(raw)
+row=data["record"]
+assert row["phase"]=="restored"
+assert hashlib.sha256(json.dumps(row,sort_keys=True,separators=(",",":")).encode()).hexdigest()==data["sha256"]
+PYJ
+fi
 [[ ! -L "$extra" ]]
 install -d -o root -g root -m 0755 "$extra"
 payload=$(mktemp -d /opt/stage3-b2-log.XXXXXX)
 chmod 0755 "$payload"
 # The baseline stays in place. Only overlay files are materialized.
 cp -as "$base/." "$payload/"
-for file in disarm_control/{ipc,log_queue,log_disarmed,owner_port,log_discovery,b3_lease}.py owner/stop_latch_test/hold_runner.py; do
+for file in disarm_control/{ipc,log_queue,log_disarmed,owner_port,log_discovery,b3_lease,b3_probe}.py owner/stop_latch_test/hold_runner.py; do
     install -m 0644 -- "$bundle/overlay/$file" "$payload/$file"
 done
 install -m 0644 -- "$bundle/log_client.py" "$payload/log_client.py"
 install -m 0644 -- "$bundle/b3_client.py" "$payload/b3_client.py"
 candidate=$extra/candidate.conf
-python3 "$bundle/profile.py" "$reference" "$base" "$payload" "$marker" "$journal" "$b3_marker" > "$candidate"
+python3 "$bundle/b3_profile.py" "$reference" "$base" "$payload" "$marker" "$journal" "$b3_marker" > "$candidate"
 printf '%s\n' "$payload" > "$installed"
 env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$payload/owner:$payload/optical:$payload" \
     "$py" - "$candidate" "$owner_uid" "$client_uid" "$client_gid" "$bundle" <<'PY'
@@ -138,7 +159,7 @@ import os, shlex, sys
 from stop_latch_test.hold_runner import parse_args
 
 sys.path.insert(0, sys.argv[5])
-from profile import IDENTITIES, resolve_identities
+from b3_profile import IDENTITIES, resolve_identities
 
 argv = shlex.split(open(sys.argv[1]).read().splitlines()[-1].removeprefix('ExecStart='))
 argv = resolve_identities(argv, dict(zip(IDENTITIES.values(), sys.argv[3:5])))
